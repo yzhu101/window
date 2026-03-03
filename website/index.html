@@ -35,13 +35,18 @@
       bottom: 16px;
       z-index: 1000;
       display: block;
-      width: 114px;
-      height: 48px;
+      /* 缩小为原来的一半 */
+      max-width: 100px;
+      max-height: 50px;
+      width: auto;
+      height: auto;
     }
     .corner-logo img {
       display: block;
-      width: 100%;
+      width: auto;
       height: auto;
+      max-width: 100%;
+      max-height: 100%;
     }
     .custom-marker {
       background: #d4a574;
@@ -65,7 +70,7 @@
   <a href="/upload.html" class="upload-btn">📷 上传花格</a>
   
   <a class="corner-logo" href="/" aria-label="Powered by 乔尔事务所">
-    <img src="/assets/img/corner-logo.png" alt="Powered by 乔尔事务所" width="114" height="48" loading="lazy" onerror="this.onerror=null;this.src='/logo.svg'">
+    <img src="/assets/img/corner-logo.png" alt="Powered by 乔尔事务所" loading="lazy" onerror="this.onerror=null;this.src='/logo.svg'">
   </a>
   
   <div id="map"></div>
