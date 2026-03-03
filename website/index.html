@@ -29,31 +29,19 @@
       gap: 8px;
     }
     .upload-btn:hover { background: #c49464; }
-    .logo {
+    .corner-logo {
       position: fixed;
-      bottom: 20px;
-      left: 20px;
+      left: 16px;
+      bottom: 16px;
       z-index: 1000;
-      background: white;
-      padding: 10px 15px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      display: block;
+      width: 114px;
+      height: 48px;
     }
-    .logo img {
-      width: 40px;
-      height: 40px;
-    }
-    .logo-text {
-      font-size: 12px;
-      color: #666;
-      line-height: 1.4;
-    }
-    .logo-text strong {
-      color: #8b7355;
-      font-size: 14px;
+    .corner-logo img {
+      display: block;
+      width: 100%;
+      height: auto;
     }
     .custom-marker {
       background: #d4a574;
@@ -76,13 +64,9 @@
 <body>
   <a href="/upload.html" class="upload-btn">📷 上传花格</a>
   
-  <div class="logo">
-    <img src="/logo.svg" alt="水泥花格地图">
-    <div class="logo-text">
-      <strong>水泥花格地图</strong><br>
-      Powered by 乔尔事务所
-    </div>
-  </div>
+  <a class="corner-logo" href="/" aria-label="Powered by 乔尔事务所">
+    <img src="/assets/img/corner-logo.webp" alt="Powered by 乔尔事务所" width="114" height="48" loading="lazy" onerror="this.onerror=null;this.src='/logo.svg'">
+  </a>
   
   <div id="map"></div>
   
