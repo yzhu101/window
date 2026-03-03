@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>水泥花格地图 - 记录城市记忆</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    #map { width: 100vw; height: 100vh; }
+    .upload-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: #d4a574;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .upload-btn:hover { background: #c49464; }
+    .logo {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 1000;
+      background: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo img {
+      width: 40px;
+      height: 40px;
+    }
+    .logo-text {
+      font-size: 12px;
+      color: #666;
+      line-height: 1.4;
+    }
+    .logo-text strong {
+      color: #8b7355;
+      font-size: 14px;
+    }
+    .custom-marker {
+      background: #d4a574;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .popup-content { text-align: center; min-width: 200px; }
+    .popup-content img { max-width: 180px; border-radius: 8px; margin-top: 8px; }
+    .popup-content h3 { margin-bottom: 8px; color: #333; font-size: 16px; }
+    .popup-content p { color: #666; font-size: 13px; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <a href="/upload.html" class="upload-btn">📷 上传花格</a>
+  
+  <div class="logo">
+    <img src="/logo.svg" alt="水泥花格地图">
+    <div class="logo-text">
+      <strong>水泥花格地图</strong><br>
+      Powered by 乔尔事务所
+    </div>
+  </div>
+  
+  <div id="map"></div>
+  
+  <script>
+    const map = L.map('map').setView([35.8617, 104.1954], 5);
+    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+      subdomains: ['1', '2', '3', '4'],
+      maxZoom: 18,
+      attribution: '© 高德地图'
+    }).addTo(map);
+
+    let markers = [];
+
+    const createIcon = () => {
+      return L.divIcon({
+        className: 'custom-marker',
+        html: '🏛️',
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+      });
+    };
+
+    async function loadWorks() {
+      let works = [];
+      try {
+        const r = await fetch('/api/works');
+        if (r.ok) {
+          const result = await r.json();
+          works = result.data || result || [];
+        } else {
+          throw new Error('api failed');
+        }
+      } catch (_) {
+        try {
+          const r2 = await fetch('./data/works.json');
+          const result2 = await r2.json();
+          works = result2.data || result2 || [];
+        } catch (e2) {
+          console.error('加载作品失败:', e2);
+          works = [];
+        }
+      }
+      
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+      
+      const useHost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      works.forEach(work => {
+        if (work.location && work.location.lat && work.location.lng) {
+          const marker = L.marker([work.location.lat, work.location.lng], {
+            icon: createIcon()
+          }).addTo(map);
+          
+          let img = work.images && work.images[0] ? work.images[0] : '';
+          if (img && img.startsWith('/uploads') && useHost) {
+            img = 'http://111.230.204.154' + img;
+          }
+          const popupContent = `
+            <div class="popup-content">
+              <h3>${work.title || '未命名花格'}</h3>
+              <p>📍 ${work.location.address || '未知位置'}</p>
+              ${img ? 
+                `<img src="${img}" alt="${work.title || ''}" onerror="this.style.display='none'">` : ''}
+            </div>
+          `;
+          
+          marker.bindPopup(popupContent);
+          markers.push(marker);
+        }
+      });
+      
+      console.log(`已加载 ${works.length} 个作品`);
+    }
+
+    loadWorks();
+    setInterval(loadWorks, 30000);
+  </script>
+</body>
+</html>

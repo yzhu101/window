@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台 - 水泥花格地图</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+    }
+    .header {
+      background: #333;
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { font-size: 20px; }
+    .header a { color: #d4a574; text-decoration: none; }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 10px 20px;
+      background: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .tab.active {
+      background: #d4a574;
+      color: white;
+    }
+    .works-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .work-card {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .work-card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+    }
+    .work-info {
+      padding: 16px;
+    }
+    .work-info h3 {
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    .work-info p {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    .work-status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+    .status-pending { background: #fff3e0; color: #e65100; }
+    .status-approved { background: #e8f5e9; color: #2e7d32; }
+    .status-rejected { background: #ffebee; color: #c62828; }
+    .work-actions {
+      padding: 12px 16px;
+      border-top: 1px solid #eee;
+      display: flex;
+      gap: 8px;
+    }
+    .btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn-approve { background: #4caf50; color: white; }
+    .btn-reject { background: #f44336; color: white; }
+    .btn-delete { background: #9e9e9e; color: white; }
+    .empty {
+      text-align: center;
+      padding: 60px;
+      color: #999;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    .logout-btn {
+      background: transparent;
+      border: 1px solid #d4a574;
+      color: #d4a574;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🏛️ 水泥花格地图 - 管理后台</h1>
+    <div>
+      <a href="/" style="margin-right: 20px;">返回地图 →</a>
+      <button class="logout-btn" onclick="logout()">退出登录</button>
+    </div>
+  </div>
+  
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('pending', this)">待审核</button>
+      <button class="tab" onclick="showTab('approved', this)">已通过</button>
+      <button class="tab" onclick="showTab('rejected', this)">已拒绝</button>
+      <button class="tab" onclick="showTab('all', this)">全部</button>
+    </div>
+    
+    <div id="worksList" class="loading">加载中...</div>
+  </div>
+
+  <script>
+    // 检查登录状态
+    function checkLogin() {
+      const cookies = document.cookie.split(';');
+      const hasToken = cookies.some(c => c.trim().startsWith('admin_token='));
+      if (!hasToken) {
+        window.location.href = '/login.html';
+        return false;
+      }
+      return true;
+    }
+    
+    // 退出登录
+    function logout() {
+      document.cookie = 'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      window.location.href = '/login.html';
+    }
+    
+    // 检查登录
+    if (!checkLogin()) {
+      throw new Error('未登录');
+    }
+    
+    let currentTab = 'pending';
+    let allWorks = [];
+    
+    async function loadWorks() {
+      try {
+        const r = await fetch('/api/works/admin/all');
+        if (r.ok) {
+          const result = await r.json();
+          allWorks = result.data || result || [];
+          renderWorks();
+          return;
+        }
+        throw new Error('api failed');
+      } catch (_) {
+        try {
+          const r2 = await fetch('./data/admin-all.json');
+          const result2 = await r2.json();
+          allWorks = result2.data || result2 || [];
+          renderWorks();
+          return;
+        } catch (e2) {
+          document.getElementById('worksList').innerHTML = 
+            '<div class="empty">加载失败，请刷新重试<br><small>' + e2.message + '</small></div>';
+        }
+      }
+    }
+    
+    function showTab(tab, btn) {
+      currentTab = tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      renderWorks();
+    }
+    
+    function renderWorks() {
+      let works = allWorks;
+      
+      if (currentTab !== 'all') {
+        works = allWorks.filter(w => w.status === currentTab);
+      }
+      
+      if (works.length === 0) {
+        document.getElementById('worksList').innerHTML = 
+          '<div class="empty">暂无数据</div>';
+        return;
+      }
+      
+      const useHost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      const html = works.map(work => {
+        let img = work.images && work.images[0] ? work.images[0] : '';
+        if (img && img.startsWith('/uploads') && useHost) {
+          img = 'http://111.230.204.154' + img;
+        }
+        return `
+        <div class="work-card">
+          <img src="${img}" 
+               alt="${work.title}" 
+               onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><rect fill=%22%23ddd%22 width=%22200%22 height=%22200%22/><text fill=%22%23999%22 x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22>无图片</text></svg>'">
+          <div class="work-info">
+            <h3>${work.title || '未命名'}</h3>
+            <p>${work.description || '无描述'}</p>
+            <p>📍 ${work.location && work.location.address ? work.location.address : '未知位置'}</p>
+            <span class="work-status status-${work.status}">
+              ${work.status === 'approved' ? '已通过' : work.status === 'rejected' ? '已拒绝' : '待审核'}
+            </span>
+          </div>
+          <div class="work-actions">
+            ${work.status !== 'approved' ? 
+              `<button class="btn btn-approve" onclick="updateStatus('${work._id}', 'approved')">通过</button>` : ''}
+            ${work.status !== 'rejected' ? 
+              `<button class="btn btn-reject" onclick="updateStatus('${work._id}', 'rejected')">拒绝</button>` : ''}
+            <button class="btn btn-delete" onclick="deleteWork('${work._id}')">删除</button>
+          </div>
+        </div>
+      `;
+      }).join('');
+      
+      document.getElementById('worksList').innerHTML = 
+        `<div class="works-grid">${html}</div>`;
+    }
+    
+    async function updateStatus(id, status) {
+      const action = status === 'approved' ? '通过' : '拒绝';
+      if (!confirm(`确定要${action}这个作品吗？`)) return;
+      
+      try {
+        const response = await fetch(`/api/works/${id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+        
+        if (response.ok) {
+          alert(`已${action}！`);
+          loadWorks();
+        } else {
+          const error = await response.json();
+          alert('操作失败: ' + (error.error || '请重试'));
+        }
+      } catch (error) {
+        alert('网络错误: ' + error.message);
+      }
+    }
+    
+    async function deleteWork(id) {
+      if (!confirm('确定要删除这个作品吗？此操作不可恢复！')) return;
+      
+      try {
+        const response = await fetch(`/api/works/${id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          alert('已删除！');
+          loadWorks();
+        } else {
+          const error = await response.json();
+          alert('删除失败: ' + (error.error || '请重试'));
+        }
+      } catch (error) {
+        alert('网络错误: ' + error.message);
+      }
+    }
+    
+    loadWorks();
+    setInterval(loadWorks, 30000);
+  </script>
+</body>
+</html>

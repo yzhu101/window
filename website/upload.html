@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>上传花格 - 水泥花格地图</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; min-height: 100vh; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    h1 { text-align: center; color: #333; margin-bottom: 20px; }
+    .form-group { background: white; padding: 20px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    label { display: block; margin-bottom: 8px; color: #555; font-weight: 500; }
+    .required::after { content: ' *'; color: #e74c3c; }
+    input[type="text"], textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+    textarea { min-height: 100px; resize: vertical; }
+    #map { width: 100%; height: 280px; border-radius: 8px; margin-top: 8px; border: 2px solid #e0e0e0; }
+    .search-box { display: flex; gap: 8px; margin-bottom: 10px; }
+    .search-box input { flex: 1; }
+    .search-box button { padding: 12px 20px; background: #d4a574; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+    .search-box button:disabled { background: #ccc; }
+    .location-info { background: #f8f9fa; padding: 12px; border-radius: 8px; margin-top: 10px; font-size: 14px; color: #666; }
+    .location-info span { color: #333; font-weight: 500; }
+    .upload-area { border: 2px dashed #d4a574; border-radius: 8px; padding: 40px; text-align: center; cursor: pointer; }
+    .upload-area input { display: none; }
+    .preview img { max-width: 100%; border-radius: 8px; margin-top: 16px; }
+    .submit-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, #d4a574 0%, #c49464 100%); color: white; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; margin-top: 20px; }
+    .submit-btn:disabled { background: #ccc; }
+    .back-link { display: inline-block; margin-bottom: 20px; color: #d4a574; text-decoration: none; }
+    .success-msg { background: #e8f5e9; color: #2e7d32; padding: 30px; border-radius: 12px; text-align: center; }
+    .tips { background: #fff3e0; padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; color: #e65100; }
+    .loading { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">← 返回地图</a>
+    <h1>📷 上传水泥花格</h1>
+    
+    <form id="uploadForm">
+      <div class="form-group">
+        <label class="required">照片</label>
+        <div class="upload-area" onclick="document.getElementById('photo').click()">
+          <input type="file" id="photo" accept="image/*" required onchange="previewImage(this)">
+          <p style="font-size: 48px; margin-bottom: 10px;">📤</p>
+          <p>点击选择照片</p>
+          <p style="color: #999; font-size: 14px; margin-top: 8px;">支持 JPG、PNG 格式</p>
+        </div>
+        <div class="preview" id="preview"></div>
+      </div>
+      
+      <div class="form-group">
+        <label class="required">标题</label>
+        <input type="text" id="title" placeholder="给这个花格起个名字" required>
+      </div>
+      
+      <div class="form-group">
+        <label>描述</label>
+        <textarea id="description" placeholder="描述一下这个花格的特点..."></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label class="required">位置</label>
+        <div class="tips">💡 提示：输入地址搜索，或在地图上点击选择位置</div>
+        
+        <div class="search-box">
+          <input type="text" id="addressInput" placeholder="输入地址，如：北京市朝阳区三里屯">
+          <button type="button" onclick="searchAddress()" id="searchBtn">🔍 搜索</button>
+        </div>
+        
+        <div id="map"></div>
+        
+        <div class="location-info">
+          经纬度：<span id="latDisplay">未选择</span>, <span id="lngDisplay">未选择</span><br>
+          地址：<span id="addressDisplay">未选择</span>
+        </div>
+        
+        <input type="hidden" id="lat" required>
+        <input type="hidden" id="lng" required>
+        <input type="hidden" id="address">
+      </div>
+      
+      <button type="submit" class="submit-btn" id="submitBtn">提交</button>
+    </form>
+  </div>
+
+  <script>
+    const TENCENT_KEY = '3DABZ-G6ECJ-2HZFC-XHP5I-KESCS-ILBMT';
+    
+    const map = L.map('map').setView([35.8617, 104.1954], 5);
+    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+      subdomains: ['1', '2', '3', '4'],
+      maxZoom: 18,
+      attribution: '© 高德地图'
+    }).addTo(map);
+    
+    let marker = null;
+    let currentLat = null;
+    let currentLng = null;
+    
+    map.on('click', function(e) {
+      setLocation(e.latlng.lat, e.latlng.lng, null);
+    });
+    
+    function setLocation(lat, lng, address) {
+      currentLat = lat;
+      currentLng = lng;
+      document.getElementById('lat').value = lat;
+      document.getElementById('lng').value = lng;
+      document.getElementById('latDisplay').textContent = lat.toFixed(6);
+      document.getElementById('lngDisplay').textContent = lng.toFixed(6);
+      
+      if (marker) map.removeLayer(marker);
+      marker = L.marker([lat, lng]).addTo(map);
+      
+      if (address) {
+        document.getElementById('address').value = address;
+        document.getElementById('addressDisplay').textContent = address;
+      } else {
+        reverseGeocode(lat, lng);
+      }
+    }
+    
+    function searchAddress() {
+      const query = document.getElementById('addressInput').value.trim();
+      if (!query) { alert('请输入地址'); return; }
+      
+      const btn = document.getElementById('searchBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading"></span>搜索中...';
+      
+      const callbackName = 'tencentGeocode_' + Date.now();
+      window[callbackName] = function(data) {
+        delete window[callbackName];
+        document.head.removeChild(script);
+        
+        btn.disabled = false;
+        btn.innerHTML = '🔍 搜索';
+        
+        console.log('腾讯地图返回:', data);
+        
+        if (data.status === 0 && data.result && data.result.location) {
+          const { lat, lng } = data.result.location;
+          const address = data.result.formatted_addresses?.recommend || data.result.address || query;
+          setLocation(lat, lng, address);
+          map.setView([lat, lng], 15);
+        } else if (data.status === 311) {
+          alert('每日调用额度已用完，请明天再试');
+        } else if (data.status === 308) {
+          alert('请求过于频繁，请稍后再试');
+        } else {
+          alert('未找到该地址：' + (data.message || '请尝试其他关键词'));
+        }
+      };
+      
+      const script = document.createElement('script');
+      script.src = `https://apis.map.qq.com/ws/geocoder/v1/?address=${encodeURIComponent(query)}&key=${TENCENT_KEY}&output=jsonp&callback=${callbackName}`;
+      
+      script.onerror = function() {
+        delete window[callbackName];
+        document.head.removeChild(script);
+        btn.disabled = false;
+        btn.innerHTML = '🔍 搜索';
+        alert('网络请求失败，请检查网络连接');
+      };
+      
+      setTimeout(function() {
+        if (window[callbackName]) {
+          delete window[callbackName];
+          if (script.parentNode) document.head.removeChild(script);
+          btn.disabled = false;
+          btn.innerHTML = '🔍 搜索';
+          alert('请求超时，请重试');
+        }
+      }, 10000);
+      
+      document.head.appendChild(script);
+    }
+    
+    function reverseGeocode(lat, lng) {
+      const callbackName = 'tencentRegeocode_' + Date.now();
+      window[callbackName] = function(data) {
+        delete window[callbackName];
+        document.head.removeChild(script);
+        
+        if (data.status === 0 && data.result) {
+          const address = data.result.formatted_addresses?.recommend || data.result.address;
+          document.getElementById('address').value = address;
+          document.getElementById('addressDisplay').textContent = address;
+        } else {
+          document.getElementById('addressDisplay').textContent = '未知地址';
+        }
+      };
+      
+      const script = document.createElement('script');
+      script.src = `https://apis.map.qq.com/ws/geocoder/v1/?location=${lat},${lng}&key=${TENCENT_KEY}&output=jsonp&callback=${callbackName}`;
+      
+      script.onerror = function() {
+        delete window[callbackName];
+        if (script.parentNode) document.head.removeChild(script);
+        document.getElementById('addressDisplay').textContent = '获取地址失败';
+      };
+      
+      setTimeout(function() {
+        if (window[callbackName]) {
+          delete window[callbackName];
+          if (script.parentNode) document.head.removeChild(script);
+        }
+      }, 10000);
+      
+      document.head.appendChild(script);
+    }
+    
+    function previewImage(input) {
+      const preview = document.getElementById('preview');
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          preview.innerHTML = '<img src="' + e.target.result + '" alt="预览">';
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+    
+    document.getElementById('uploadForm').onsubmit = async function(e) {
+      e.preventDefault();
+      if (!currentLat || !currentLng) { alert('请选择位置'); return; }
+      
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="loading"></span>上传中...';
+      
+      try {
+        const formData = new FormData();
+        formData.append('images', document.getElementById('photo').files[0]);
+        formData.append('title', document.getElementById('title').value);
+        formData.append('description', document.getElementById('description').value);
+        formData.append('lat', currentLat);
+        formData.append('lng', currentLng);
+        formData.append('address', document.getElementById('address').value || '');
+        
+        const response = await fetch('/api/works', { method: 'POST', body: formData });
+        
+        if (response.ok) {
+          document.querySelector('.container').innerHTML = '<div class="success-msg"><h2>✅ 上传成功！</h2><p>感谢您的分享，您的花格已提交审核。</p><p style="margin-top: 15px;"><a href="/" style="color: #2e7d32; margin-right: 20px;">返回地图</a><a href="/upload.html" style="color: #2e7d32;">继续上传</a></p></div>';
+        } else {
+          const error = await response.json();
+          alert('上传失败: ' + (error.error || '请重试'));
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '提交';
+        }
+      } catch (error) {
+        alert('上传失败，请检查网络连接');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '提交';
+      }
+    };
+    
+    document.getElementById('addressInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); searchAddress(); }
+    });
+  </script>
+</body>
+</html>

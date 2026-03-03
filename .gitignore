@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Builds
+dist/
+build/
+.parcel-cache/
+.vite/
+
+# Env / secrets
+.env
+.env.*
+
