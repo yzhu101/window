@@ -109,6 +109,38 @@
       padding: 40px;
       color: #666;
     }
+    .view-btn {
+      padding: 8px 16px;
+      border: 1px solid #ddd;
+      background: white;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .view-btn.active {
+      background: #eee;
+      font-weight: bold;
+    }
+    .works-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .works-table th, .works-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    .works-table th {
+      background: #f9f9f9;
+      font-weight: 600;
+    }
+    .works-table img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
     .logout-btn {
       background: transparent;
       border: 1px solid #d4a574;
@@ -117,6 +149,44 @@
       border-radius: 6px;
       cursor: pointer;
     }
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    .modal h2 { margin-top: 0; margin-bottom: 20px; color: #333; }
+    .form-row { margin-bottom: 16px; }
+    .form-row label { display: block; margin-bottom: 8px; color: #666; font-weight: 500; }
+    .form-row input, .form-row select, .form-row textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 24px;
+    }
+    .btn-cancel { background: #eee; color: #333; }
+    .btn-save { background: #d4a574; color: white; }
   </style>
 </head>
 <body>
@@ -130,13 +200,60 @@
   
   <div class="container">
     <div class="tabs">
-      <button class="tab active" onclick="showTab('pending', this)">待审核</button>
-      <button class="tab" onclick="showTab('approved', this)">已通过</button>
-      <button class="tab" onclick="showTab('rejected', this)">已拒绝</button>
-      <button class="tab" onclick="showTab('all', this)">全部</button>
+      <button class="tab active" onclick="showTab('pending')">待审核</button>
+      <button class="tab" onclick="showTab('approved')">已通过</button>
+      <button class="tab" onclick="showTab('rejected')">已拒绝</button>
+      <button class="tab" onclick="showTab('all')">全部</button>
+    </div>
+    
+    <div class="view-controls" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
+      <button class="view-btn active" onclick="switchView('card')">📅 卡片视图</button>
+      <button class="view-btn" onclick="switchView('table')">📋 表格视图</button>
+      <button class="export-btn" onclick="exportData()" style="margin-left: auto; background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">📤 导出数据</button>
     </div>
     
     <div id="worksList" class="loading">加载中...</div>
+  </div>
+
+  <div id="editModal" class="modal-overlay">
+    <div class="modal">
+      <h2>✏️ 编辑花格信息</h2>
+      <div class="form-row">
+        <label>标题</label>
+        <input type="text" id="editTitle">
+      </div>
+      <div class="form-row">
+        <label>描述</label>
+        <textarea id="editDesc" rows="3"></textarea>
+      </div>
+      <div class="form-row">
+        <label>稀有程度</label>
+        <select id="editRarity">
+          <option value="普通">普通</option>
+          <option value="稀有">稀有</option>
+          <option value="非常稀有">非常稀有</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>地址</label>
+        <input type="text" id="editAddress">
+      </div>
+      <div class="form-row">
+        <label>城市</label>
+        <input type="text" id="editCity" placeholder="如：深圳市（留空则自动计算）">
+      </div>
+      <div class="form-row">
+        <label>经纬度</label>
+        <div style="display: flex; gap: 10px;">
+          <input type="text" id="editLat" placeholder="纬度 Lat，例如 22.543096">
+          <input type="text" id="editLng" placeholder="经度 Lng，例如 114.057865">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-cancel" onclick="closeEditModal()">取消</button>
+        <button class="btn btn-save" onclick="saveEdit()">保存</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -163,7 +280,46 @@
     }
     
     let currentTab = 'pending';
+    let currentView = 'card';
     let allWorks = [];
+    
+    function switchView(view) {
+      currentView = view;
+      document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      renderWorks();
+    }
+
+    function exportData() {
+      let works = allWorks;
+      if (currentTab !== 'all') {
+        works = allWorks.filter(w => w.status === currentTab);
+      }
+      
+      const headers = ['ID', '标题', '描述', '地址', '经度', '纬度', '状态', '图片链接', '创建时间', '用户ID', '稀有程度'];
+      const csvContent = [
+        headers.join(','),
+        ...works.map(w => [
+          w._id,
+          `"${(w.title || '').replace(/"/g, '""')}"`,
+          `"${(w.description || '').replace(/"/g, '""')}"`,
+          `"${(w.location?.address || '').replace(/"/g, '""')}"`,
+          w.location?.lng || '',
+          w.location?.lat || '',
+          w.status,
+          w.images?.[0] || '',
+          w.createdAt || '',
+          w.userId || '匿名',
+          w.rarity || '普通'
+        ].join(','))
+      ].join('\n');
+
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `works_export_${currentTab}_${new Date().toISOString().slice(0,10)}.csv`;
+      link.click();
+    }
     
     async function loadWorks() {
       try {
@@ -189,10 +345,10 @@
       }
     }
     
-    function showTab(tab, btn) {
+    function showTab(tab) {
       currentTab = tab;
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      btn.classList.add('active');
+      event.target.classList.add('active');
       renderWorks();
     }
     
@@ -208,7 +364,87 @@
           '<div class="empty">暂无数据</div>';
         return;
       }
-      
+
+      if (currentView === 'table') {
+        renderTable(works);
+      } else {
+        renderCards(works);
+      }
+    }
+
+    function renderTable(works) {
+      const html = `
+        <table class="works-table">
+          <thead>
+            <tr>
+              <th>图片</th>
+              <th>标题/描述</th>
+              <th>位置</th>
+              <th>城市</th>
+              <th>用户ID</th>
+              <th>上传时间</th>
+              <th>稀有程度</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${works.map(work => {
+              let img = work.images && work.images[0] ? work.images[0] : '';
+              if (img && img.startsWith('/uploads') && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+                img = 'http://111.230.204.154' + img;
+              }
+              const date = work.createdAt ? new Date(work.createdAt).toLocaleString() : '未知';
+              const addr = work.location?.address || '';
+              function parseCity(address) {
+                if (!address) return '';
+                const s = address.replace(/.*?省/, '');
+                const mCity = s.match(/([一-龥]{2,}市)/);
+                if (mCity) return mCity[1];
+                const municipalities = ['北京','上海','天津','重庆','香港','澳门','台湾'];
+                for (const name of municipalities) {
+                  if (s.includes(name)) return ['香港','澳门','台湾'].includes(name) ? name : name + '市';
+                }
+                const common = ['深圳','广州','苏州','杭州','南京','武汉','西安','成都','郑州','青岛','厦门','福州','长沙','合肥','宁波','无锡','佛山','大连','沈阳'];
+                for (const name of common) {
+                  if (s.includes(name)) return name + '市';
+                }
+                return '';
+              }
+              const city = (work.location && work.location.city) ? work.location.city : parseCity(addr) || '-';
+              return `
+                <tr>
+                  <td><img src="${img}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><rect fill=%22%23ddd%22 width=%2260%22 height=%2260%22/></svg>'"></td>
+                  <td>
+                    <strong>${work.title || '未命名'}</strong><br>
+                    <small>${work.description || '无描述'}</small>
+                  </td>
+                  <td>${work.location?.address || '未知'}</td>
+                  <td>${city}</td>
+                  <td>${work.userId || '匿名'}</td>
+                  <td>${date}</td>
+                  <td>${work.rarity || '普通'}</td>
+                  <td><span class="work-status status-${work.status}">${work.status === 'approved' ? '已通过' : work.status === 'rejected' ? '已拒绝' : '待审核'}</span></td>
+                  <td>
+                    <div style="display: flex; gap: 5px;">
+                      <button class="btn" style="padding: 4px 8px; font-size: 12px; background: #2196f3; color: white;" onclick="openEditModal('${work._id}')">编辑</button>
+                      ${work.status !== 'approved' ? 
+                        `<button class="btn btn-approve" style="padding: 4px 8px; font-size: 12px;" onclick="updateStatus('${work._id}', 'approved')">通过</button>` : ''}
+                      ${work.status !== 'rejected' ? 
+                        `<button class="btn btn-reject" style="padding: 4px 8px; font-size: 12px;" onclick="updateStatus('${work._id}', 'rejected')">拒绝</button>` : ''}
+                      <button class="btn btn-delete" style="padding: 4px 8px; font-size: 12px;" onclick="deleteWork('${work._id}')">删除</button>
+                    </div>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+      document.getElementById('worksList').innerHTML = html;
+    }
+
+    function renderCards(works) {
       const useHost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
       const html = works.map(work => {
         let img = work.images && work.images[0] ? work.images[0] : '';
@@ -224,13 +460,15 @@
             <h3>${work.title || '未命名'}</h3>
             <p>${work.description || '无描述'}</p>
             <p>📍 ${work.location && work.location.address ? work.location.address : '未知位置'}</p>
+            <p>💎 稀有度：${work.rarity || '普通'}</p>
             <span class="work-status status-${work.status}">
               ${work.status === 'approved' ? '已通过' : work.status === 'rejected' ? '已拒绝' : '待审核'}
             </span>
           </div>
           <div class="work-actions">
-            ${work.status !== 'approved' ? 
-              `<button class="btn btn-approve" onclick="updateStatus('${work._id}', 'approved')">通过</button>` : ''}
+              <button class="btn" style="background: #2196f3; color: white;" onclick="openEditModal('${work._id}')">编辑</button>
+              ${work.status !== 'approved' ? 
+                `<button class="btn btn-approve" onclick="updateStatus('${work._id}', 'approved')">通过</button>` : ''}
             ${work.status !== 'rejected' ? 
               `<button class="btn btn-reject" onclick="updateStatus('${work._id}', 'rejected')">拒绝</button>` : ''}
             <button class="btn btn-delete" onclick="deleteWork('${work._id}')">删除</button>
@@ -243,6 +481,61 @@
         `<div class="works-grid">${html}</div>`;
     }
     
+    let currentEditId = null;
+
+    function openEditModal(workId) {
+      const work = allWorks.find(w => String(w._id) === String(workId));
+      if (!work) return;
+      
+      currentEditId = workId;
+      document.getElementById('editTitle').value = work.title || '';
+      document.getElementById('editDesc').value = work.description || '';
+      document.getElementById('editRarity').value = work.rarity || '普通';
+      document.getElementById('editAddress').value = work.location?.address || '';
+      document.getElementById('editCity').value = work.location?.city || '';
+      document.getElementById('editLat').value = (work.location?.lat ?? '');
+      document.getElementById('editLng').value = (work.location?.lng ?? '');
+      
+      document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+      currentEditId = null;
+    }
+
+    async function saveEdit() {
+      if (!currentEditId) return;
+      
+      const data = {
+        title: document.getElementById('editTitle').value,
+        description: document.getElementById('editDesc').value,
+        rarity: document.getElementById('editRarity').value,
+        address: document.getElementById('editAddress').value,
+        city: document.getElementById('editCity').value,
+        lat: document.getElementById('editLat').value,
+        lng: document.getElementById('editLng').value
+      };
+      
+      try {
+        const response = await fetch(`/api/works/${currentEditId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+          alert('保存成功！');
+          closeEditModal();
+          loadWorks();
+        } else {
+          alert('保存失败，请重试');
+        }
+      } catch (e) {
+        alert('网络错误');
+      }
+    }
+
     async function updateStatus(id, status) {
       const action = status === 'approved' ? '通过' : '拒绝';
       if (!confirm(`确定要${action}这个作品吗？`)) return;

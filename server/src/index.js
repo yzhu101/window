@@ -18,13 +18,16 @@ await mongoose.connect(MONGODB_URI)
 const workSchema = new mongoose.Schema({
   title: String,
   description: String,
+  userId: String,
+  rarity: { type: String, default: '普通' },
   images: [String],
   tags: [String],
   status: { type: String, default: 'pending' },
   location: {
     lat: Number,
     lng: Number,
-    address: String
+    address: String,
+    city: String
   }
 }, { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } })
 
@@ -42,6 +45,21 @@ const COS_REGION = process.env.COS_REGION
 const UPLOAD_PREFIX = process.env.UPLOAD_PREFIX || 'uploads/'
 const UPLOAD_BASE = process.env.UPLOAD_BASE || ''
 
+function computeCity(address = '') {
+  if (!address) return ''
+  const s = address.replace(/.*?省/, '')
+  const mCity = s.match(/([一-龥]{2,}市)/)
+  if (mCity) return mCity[1]
+  const municipalities = ['北京','上海','天津','重庆','香港','澳门','台湾']
+  for (const name of municipalities) {
+    if (s.includes(name)) return ['香港','澳门','台湾'].includes(name) ? name : name + '市'
+  }
+  const common = ['深圳','广州','苏州','杭州','南京','武汉','西安','成都','郑州','青岛','厦门','福州','长沙','合肥','宁波','无锡','佛山','大连','沈阳']
+  for (const name of common) {
+    if (s.includes(name)) return name + '市'
+  }
+  return ''
+}
 function requireAdmin(req, res, next) {
   const token = (req.headers['x-admin-token'] || '').toString()
   const cookie = (req.headers.cookie || '').toString()
@@ -62,7 +80,7 @@ app.get('/api/works/admin/all', requireAdmin, async (req, res) => {
 
 app.post('/api/works', upload.array('images'), async (req, res) => {
   try {
-    const { title = '', description = '', lat, lng, address = '' } = req.body
+    const { title = '', description = '', userId = '', rarity = '普通', lat, lng, address = '' } = req.body
     const files = req.files || []
     const uploadedUrls = []
 
@@ -88,13 +106,16 @@ app.post('/api/works', upload.array('images'), async (req, res) => {
     const doc = await Work.create({
       title,
       description,
+      userId,
+      rarity,
       images: uploadedUrls,
       tags: [],
       status: 'pending',
       location: {
         lat: lat ? Number(lat) : undefined,
         lng: lng ? Number(lng) : undefined,
-        address
+        address,
+        city: computeCity(address)
       }
     })
     res.json({ success: true, data: doc })
@@ -116,13 +137,62 @@ app.patch('/api/works/:id/status', requireAdmin, async (req, res) => {
   }
 })
 
+app.put('/api/works/:id', requireAdmin, async (req, res) => {
+  try {
+    const { title, description, rarity, address, lat, lng, city } = req.body
+    const updateData = {}
+    if (title !== undefined) updateData.title = title
+    if (description !== undefined) updateData.description = description
+    if (rarity !== undefined) updateData.rarity = rarity
+    if (address !== undefined) {
+      updateData['location.address'] = address
+      updateData['location.city'] = computeCity(address)
+    }
+    if (city !== undefined) {
+      updateData['location.city'] = city
+    }
+    if (lat !== undefined) {
+      const numLat = Number(lat)
+      if (!Number.isNaN(numLat)) updateData['location.lat'] = numLat
+    }
+    if (lng !== undefined) {
+      const numLng = Number(lng)
+      if (!Number.isNaN(numLng)) updateData['location.lng'] = numLng
+    }
+    
+    const item = await Work.findByIdAndUpdate(req.params.id, { $set: updateData }, { new: true })
+    if (!item) return res.status(404).json({ error: 'not found' })
+    res.json({ success: true, data: item })
+  } catch (e) {
+    res.status(400).json({ error: e.message || 'failed' })
+  }
+})
+
 app.delete('/api/works/:id', requireAdmin, async (req, res) => {
   const item = await Work.findByIdAndDelete(req.params.id)
   if (!item) return res.status(404).json({ error: 'not found' })
   res.json({ success: true })
 })
 
+app.post('/api/tools/backfill-city', requireAdmin, async (req, res) => {
+  try {
+    const items = await Work.find({ $or: [ { 'location.city': { $exists: false } }, { 'location.city': '' }, { 'location.city': null } ] })
+    let updated = 0
+    for (const item of items) {
+      const addr = item.location?.address || ''
+      const city = computeCity(addr)
+      if (city) {
+        await Work.updateOne({ _id: item._id }, { $set: { 'location.city': city } })
+        updated++
+      }
+    }
+    const distinctCities = await Work.distinct('location.city', { 'location.city': { $exists: true, $ne: '' } })
+    res.json({ success: true, scanned: items.length, updated, cityCount: distinctCities.length })
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'backfill failed' })
+  }
+})
+
 app.listen(PORT, () => {
   console.log(`server on :${PORT}`)
 })
-

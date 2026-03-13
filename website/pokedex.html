@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>花格图鉴 - 水泥花格地图</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      background: #f5f1e6; 
+      min-height: 100vh; 
+      color: #333;
+    }
+    
+    .nav-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(245, 241, 230, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(94, 54, 67, 0.1);
+    }
+    
+    .back-link {
+      color: #5e3643;
+      text-decoration: none;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 16px;
+    }
+    
+    .page-title { font-size: 18px; font-weight: bold; color: #5e3643; }
+    .stats-badge { font-size: 12px; color: #666; }
+    
+    .container { max-width: 800px; margin: 0 auto; padding: 24px 16px; }
+    
+    .intro-card {
+      padding: 12px 0;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+    .intro-card p { 
+      color: #888; 
+      line-height: 1.6; 
+      font-size: 14px; 
+      font-style: normal; 
+    }
+
+    /* --- 树状图样式核心 --- */
+    .family-section { margin-bottom: 50px; }
+    .family-header { margin-bottom: 24px; border-left: 4px solid #5e3643; padding-left: 12px; }
+    .family-header h3 { color: #5e3643; font-size: 20px; }
+    .family-header p { color: #888; font-size: 13px; margin-top: 4px; }
+
+    /* 树形容器 */
+    .tree-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding-left: 10px;
+    }
+
+    /* 每一层级 */
+    .tree-level {
+      display: flex;
+      align-items: flex-start;
+      position: relative;
+    }
+    .family-section .tree-level.root { margin-bottom: 14px; }
+    .family-section .tree-level.root { margin-bottom: 22px; }
+
+    /* 连接线系统 */
+    .tree-connector {
+      width: 30px;
+      height: 60px; /* 连接线高度 */
+      border-left: 2px solid #ccc;
+      border-bottom: 2px solid #ccc;
+      margin-right: 10px;
+      margin-top: -30px; /* 向上延伸对接上一层 */
+      border-bottom-left-radius: 12px;
+      flex-shrink: 0;
+    }
+    
+    /* 根节点不需要左侧连接线 */
+    .tree-level.root .tree-connector { display: none; }
+    
+    /* 节点卡片 */
+    .node-card {
+      background: #fff;
+      border: 1px solid rgba(94, 54, 67, 0.15);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 320px;
+      position: relative;
+      transition: all 0.2s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    }
+    
+    .node-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(94, 54, 67, 0.1);
+      border-color: #5e3643;
+    }
+
+    .pixel-icon {
+      width: 48px;
+      height: 48px;
+      background: #5e3643;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      image-rendering: pixelated;
+      border: 1px solid #5e3643;
+    }
+    .pixel-icon img { width: 32px; height: 32px; opacity: 0.9; }
+    
+    .node-info { flex: 1; }
+    .node-name { font-weight: bold; font-size: 15px; color: #333; }
+    .node-tags { display: flex; gap: 6px; margin-top: 4px; }
+    .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #eee; color: #666; }
+    .tag.origin { background: #eee; color: #666; }
+    .tag.variant { background: #eee; color: #666; }
+    .tag.material { background: #eee; color: #666; }
+
+    /* 可折叠/展开的交互样式 */
+    .node-card.has-children {
+      cursor: pointer;
+      padding-right: 32px; /* 给折叠图标留位 */
+    }
+    
+    .node-card.has-children::after {
+      content: '+';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 20px;
+      height: 20px;
+      background: #eee;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 20px;
+      color: #666;
+      font-weight: bold;
+      font-family: monospace;
+      transition: all 0.2s;
+    }
+    
+    /* 展开状态 */
+    .node-card.has-children.expanded {
+      background-color: #fff8f0;
+      border-color: #5e3643;
+    }
+    
+    .node-card.has-children.expanded::after {
+      content: '-';
+      background: #5e3643;
+      color: #fff;
+    }
+
+    /* 默认隐藏子节点容器 */
+    .children-container {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+      margin-left: 24px;
+      margin-top: 16px;
+      margin-bottom: 0;
+      position: relative;
+      /* 简单的展开动画 */
+      animation: slideDown 0.3s ease-out;
+    }
+    
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* 激活显示 */
+    .children-container.show {
+      display: flex;
+      margin-bottom: 14px; /* 展开时与下一个根节点保持 14px 间距 */
+    }
+    
+    /* 垂直贯穿线 */
+    .children-container::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: -10px;
+      bottom: 20px; /* 不到底，留出最后一个弯 */
+      width: 2px;
+      background: #ccc;
+    }
+
+    /* 待解锁 */
+    .node-card.locked { opacity: 0.6; filter: grayscale(1); border-style: dashed; }
+    
+    .upload-cta {
+      margin-top: 40px;
+      text-align: center;
+      padding: 30px;
+      background: linear-gradient(145deg, #653a48, #552f3a);
+      border-radius: 16px;
+      color: #fff;
+    }
+    .cta-btn {
+      background: #fff;
+      color: #5e3643;
+      padding: 10px 24px;
+      border-radius: 100px;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 14px;
+      display: inline-block;
+      margin-top: 16px;
+    }
+    .icp-badge {
+      position: fixed;
+      right: 16px;
+      bottom: 8px;
+      z-index: 1000;
+      font-size: 8px;
+      color: #5e3643;
+      text-align: right;
+    }
+    .icp-badge a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+  </style>
+</head>
+<body>
+
+  <nav class="nav-bar">
+    <a href="/" class="back-link">← 返回地图</a>
+    <div class="page-title">花格谱系</div>
+    <div class="stats-badge"><span id="pk-workCount">...</span><span id="pk-cityCount" style="margin-left:6px;"></span></div>
+  </nav>
+
+  <div class="container">
+    <div class="intro-card">
+      <p>从基础原型到复杂变体，这里记录了城市中发现的所有花格类型。</p>
+    </div>
+
+    <!-- 谱系 1: 鸟类系 -->
+    <div class="family-section">
+      <div class="family-header">
+        <h3>🪽 鸟类纹系</h3>
+        <p>线条如同飞翔的海鸥，也像波浪，是最具代表性的花格类型。</p>
+      </div>
+      
+      <!-- 根节点 -->
+      <div class="tree-level root">
+        <!-- 添加 has-children 类来触发交互 -->
+        <div class="node-card has-children">
+          <div class="pixel-icon">
+            <img src="/assets/img/001.png" alt="基础海鸥纹">
+          </div>
+          <div class="node-info">
+            <div class="node-name">基础海鸥纹</div>
+            <div class="node-tags"><span class="tag origin">原型</span><span class="tag">No.001</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 子节点区域 -->
+      <div class="children-container">
+        
+
+        <!-- 子节点 3 -->
+        <div class="tree-level">
+          <div class="tree-connector"></div>
+          <div class="node-card">
+            <div class="pixel-icon" style="background: #f0f8ff;">
+              <img src="/assets/img/001-1.png" alt="极简海鸥">
+            </div>
+            <div class="node-info">
+              <div class="node-name">极简海鸥</div>
+            <div class="node-tags"><span class="tag variant">结构</span><span class="tag">No.001-1</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 子节点 4 (待解锁) -->
+        <div class="tree-level">
+          <div class="tree-connector"></div>
+          <div class="node-card locked">
+            <div class="pixel-icon">❓</div>
+            <div class="node-info">
+              <div class="node-name">???</div>
+              <div class="node-tags"><span class="tag">未发现</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      
+      <div class="tree-level root">
+        <div class="node-card has-children">
+          <div class="pixel-icon">
+            <img src="/assets/img/009.png" alt="基础白鸽纹" style="transform: scale(0.9);">
+          </div>
+          <div class="node-info">
+            <div class="node-name">基础白鸽纹</div>
+            <div class="node-tags"><span class="tag origin">原型</span><span class="tag">No.002</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="children-container">
+        <div class="tree-level">
+          <div class="tree-connector"></div>
+          <div class="node-card locked">
+             <div class="pixel-icon">❓</div>
+            <div class="node-info">
+              <div class="node-name">???</div>
+              <div class="node-tags"><span class="tag">未发现</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- 谱系 2: 几何系 -->
+    <div class="family-section">
+      <div class="family-header">
+        <h3>💠 几何纹系</h3>
+        <p>由基础几何图形构成的严谨图案。</p>
+      </div>
+
+      <div class="tree-level root">
+        <div class="node-card has-children">
+          <div class="pixel-icon">
+            <img src="/assets/img/004.png" alt="基础海棠纹">
+          </div>
+          <div class="node-info">
+            <div class="node-name">基础海棠纹</div>
+            <div class="node-tags"><span class="tag origin">原型</span><span class="tag">No.003</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="children-container">
+        <div class="tree-level">
+          <div class="tree-connector"></div>
+          <div class="node-card locked">
+             <div class="pixel-icon">❓</div>
+            <div class="node-info">
+              <div class="node-name">???</div>
+              <div class="node-tags"><span class="tag">未发现</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="tree-level root">
+        <div class="node-card has-children">
+          <div class="pixel-icon">
+            <img src="/assets/img/006.png" alt="基础方胜纹">
+          </div>
+          <div class="node-info">
+            <div class="node-name">基础方胜纹</div>
+            <div class="node-tags"><span class="tag origin">原型</span><span class="tag">No.004</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="children-container">
+        <div class="tree-level">
+          <div class="tree-connector"></div>
+          <div class="node-card locked">
+             <div class="pixel-icon">❓</div>
+            <div class="node-info">
+              <div class="node-name">???</div>
+              <div class="node-tags"><span class="tag">未发现</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tree-level root">
+        <div class="node-card has-children">
+          <div class="pixel-icon">
+            <img src="/assets/img/007.png" alt="基础圆形">
+          </div>
+          <div class="node-info">
+            <div class="node-name">基础圆形</div>
+            <div class="node-tags"><span class="tag origin">原型</span><span class="tag">No.005</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="children-container">
+        <div class="tree-level">
+          <div class="tree-connector"></div>
+          <div class="node-card">
+            <div class="pixel-icon">
+              <img src="/assets/img/008.png" style="transform: scale(0.9);" alt="双圆环">
+            </div>
+            <div class="node-info">
+              <div class="node-name">双圆环</div>
+            <div class="node-tags"><span class="tag variant">结构</span><span class="tag">No.005-1</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="tree-level">
+          <div class="tree-connector"></div>
+          <div class="node-card locked">
+             <div class="pixel-icon">❓</div>
+            <div class="node-info">
+              <div class="node-name">???</div>
+              <div class="node-tags"><span class="tag">未发现</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="family-section">
+      <div class="family-header">
+        <h3>🌷 花草纹系</h3>
+        <p>以花瓣、枝叶与藤蔓为母题的柔和纹样。</p>
+      </div>
+
+      <div class="tree-level root">
+        <div class="node-card has-children">
+          <div class="pixel-icon">
+            <img src="/assets/img/005.png" alt="基础花瓣纹">
+          </div>
+          <div class="node-info">
+            <div class="node-name">基础花瓣纹</div>
+            <div class="node-tags"><span class="tag origin">原型</span><span class="tag">No.006</span></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="children-container">
+        <div class="tree-level">
+          <div class="tree-connector"></div>
+          <div class="node-card locked">
+             <div class="pixel-icon">❓</div>
+            <div class="node-info">
+              <div class="node-name">???</div>
+              <div class="node-tags"><span class="tag">未发现</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="family-section">
+      <div class="family-header">
+        <h3>❓ ???纹系</h3>
+        <p>尚未分类的未知纹样，待后续补充。</p>
+      </div>
+      <div class="tree-level root">
+        <div class="node-card locked">
+          <div class="pixel-icon">❓</div>
+          <div class="node-info">
+            <div class="node-name">???</div>
+            <div class="node-tags"><span class="tag">未发现</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="upload-cta">
+      <h3>发现新物种？</h3>
+      <p>如果你发现了图鉴中没有的花格，请拍照上传！<br>我们将绘制专属的像素图标。</p>
+      <a href="/upload.html" class="cta-btn">去上传</a>
+    </div>
+
+  </div>
+
+  <script>
+    // 简单的折叠/展开逻辑
+    document.querySelectorAll('.node-card.has-children').forEach(card => {
+      card.addEventListener('click', function(e) {
+        // 切换当前卡片的展开状态
+        this.classList.toggle('expanded');
+        
+        // 找到紧邻的下一个元素（通常是 children-container 的父级或直接是容器）
+        // 在我们的结构中，根节点的 children-container 是它的兄弟元素（在父级 tree-level 之外）
+        // 或者是在同一个 tree-level 下的兄弟元素
+        
+        // 策略：找到当前卡片所在的 .tree-level，然后在该 level 内找 .children-container
+        // 或者如果 .children-container 是 .tree-level 的兄弟（如根节点情况）
+        
+        let container = null;
+        
+        // 情况1：根节点，children-container 是 tree-level root 的兄弟
+        if (this.parentElement.classList.contains('root')) {
+          container = this.parentElement.nextElementSibling;
+        } 
+        // 情况2：子节点（如红砖海鸥），children-container 是 node-card 父级 div 的兄弟
+        else {
+          container = this.parentElement.nextElementSibling;
+        }
+        
+        if (container && container.classList.contains('children-container')) {
+          container.classList.toggle('show');
+        }
+      });
+    });
+    async function loadCounts() {
+      let works = [];
+      try {
+        const r = await fetch('/api/works');
+        if (r.ok) {
+          const result = await r.json();
+          works = result.data || result || [];
+        } else {
+          const r2 = await fetch('./data/works.json');
+          const result2 = await r2.json();
+          works = result2.data || result2 || [];
+        }
+      } catch (_) {
+        try {
+          const r2 = await fetch('./data/works.json');
+          const result2 = await r2.json();
+          works = result2.data || result2 || [];
+        } catch (e2) {
+          works = [];
+        }
+      }
+      const countEl = document.getElementById('pk-workCount');
+      const cityEl = document.getElementById('pk-cityCount');
+      if (countEl) countEl.textContent = `记录：${works.length}`;
+      function parseCity(address) {
+        if (!address) return '';
+        const s = address.replace(/.*?省/, '');
+        const mCity = s.match(/([一-龥]{2,}市)/);
+        if (mCity) return mCity[1];
+        const municipalities = ['北京','上海','天津','重庆','香港','澳门','台湾'];
+        for (const name of municipalities) {
+          if (s.includes(name)) return ['香港','澳门','台湾'].includes(name) ? name : name + '市';
+        }
+        const common = ['深圳','广州','苏州','杭州','南京','武汉','西安','成都','郑州','青岛','厦门','福州','长沙','合肥','宁波','无锡','佛山','大连','沈阳'];
+        for (const name of common) {
+          if (s.includes(name)) return name + '市';
+        }
+        return '';
+      }
+      const cities = new Set();
+      works.forEach(w => {
+        const addr = (w.location && w.location.address) ? w.location.address : '';
+        const city = (w.location && w.location.city) ? w.location.city : parseCity(addr);
+        if (city) cities.add(city);
+      });
+      if (cityEl) cityEl.textContent = `城市：${cities.size}`;
+    }
+    loadCounts();
+  </script>
+  <div class="icp-badge"><a href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">粤ICP备2026024114号-1</a></div>
+
+</body>

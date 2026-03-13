@@ -10,36 +10,209 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     #map { width: 100vw; height: 100vh; }
-    .upload-btn {
+    .glass-bar {
       position: fixed;
       top: 20px;
-      right: 20px;
+      left: 50%;
+      transform: translateX(-50%);
       z-index: 1000;
-      background: #d4a574;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 6px 6px 16px; /* 右侧padding减小，因为按钮自带padding */
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border-radius: 100px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      white-space: nowrap;
+      max-width: 90vw;
+    }
+    .glass-bar:hover {
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+      transform: translateX(-50%) translateY(-2px) scale(1.02);
+      background: rgba(255, 255, 255, 0.85);
+    }
+    .site-logo {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      opacity: 0.9;
+    }
+    .site-logo img {
+      height: 100%;
+      width: auto;
+      display: block;
+    }
+    /* 分隔线样式优化 */
+    .divider {
+      width: 1px;
+      height: 16px;
+      background: rgba(0,0,0,0.08);
+      margin: 0 4px;
+    }
+    .upload-btn {
+      background: #5e3643; /* 改为深色背景，更像胶囊按钮 */
       color: white;
       border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
+      padding: 8px 16px;
+      border-radius: 100px;
       cursor: pointer;
-      font-size: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      font-size: 13px;
+      font-weight: 600;
       text-decoration: none;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(94, 54, 67, 0.3);
+      flex-shrink: 0;
     }
-    .upload-btn:hover { background: #c49464; }
+    .upload-btn:hover {
+      background: #6e404f;
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(94, 54, 67, 0.4);
+    }
+    .upload-btn-upload {
+      background: #fff;
+      color: #5e3643;
+      border: 1px solid #eee;
+      box-shadow: none;
+    }
+    .upload-btn-upload:hover {
+      background: #fff;
+      box-shadow: none;
+    }
+    .upload-btn span {
+      display: inline-block; /* 确保文字不换行 */
+    }
+    /* 统计数字样式 */
+    .stats-badge {
+      font-size: 12px;
+      color: #666;
+      font-weight: 500;
+      margin-right: 4px;
+      display: inline-block;
+    }
+    @media (min-width: 600px) {
+      .stats-badge {
+        display: block;
+      }
+    }
+    @media (max-width: 600px) {
+      .stats-badge { font-size: 11px; }
+      .glass-bar { padding: 4px 8px 4px 12px; gap: 8px; }
+      .upload-btn { padding: 6px 10px; font-size: 12px; }
+      .pokedex-btn span:last-child { display: none; }
+      .upload-btn-upload span:last-child { display: none; }
+    }
+    .social-links {
+      position: fixed;
+      right: 16px;
+      bottom: 80px; /* 在右下角Logo上方，Logo高度约35px，加上间距 */
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .social-btn {
+      width: 36px;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(12px);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.6);
+      transition: all 0.2s;
+      color: #555;
+      text-decoration: none;
+      font-size: 18px;
+    }
+    .social-btn:hover {
+      transform: scale(1.1);
+      background: #fff;
+      color: #333;
+    }
+    .social-btn.xhs:hover { color: #ff2442; } /* 小红书红 */
+    .social-btn.wx:hover { color: #07c160; } /* 微信绿 */
+    .leaflet-control-zoom {
+      bottom: 80px !important; /* 再抬高一点，给图例留出足够空间 */
+      left: 16px !important;
+      margin-bottom: 0 !important;
+      position: fixed !important;
+      top: auto !important;
+      right: auto !important;
+      border: none !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+      margin: 0 !important;
+      z-index: 900 !important; /* 确保在图例之上，但低于弹窗 */
+    }
+    .leaflet-control-zoom a {
+      background: rgba(255, 255, 255, 0.9) !important;
+      backdrop-filter: blur(4px);
+      color: #555 !important;
+      border-bottom: 1px solid #eee !important;
+    }
+    .leaflet-control-zoom a:first-child { border-top-left-radius: 8px !important; border-top-right-radius: 8px !important; }
+    .leaflet-control-zoom a:last-child { border-bottom-left-radius: 8px !important; border-bottom-right-radius: 8px !important; border-bottom: none !important; }
+    
+    .legend {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 4px 8px; /* 进一步减小内边距 */
+      border-radius: 6px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      font-size: 10px; /* 极小字号 */
+      color: #666;
+      display: flex;
+      gap: 8px; /* 减小间距 */
+      align-items: center;
+      transform: scale(0.9); /* 整体缩放 */
+      transform-origin: bottom left;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0;
+    }
+    .legend-dot {
+      width: 6px; /* 极小圆点 */
+      height: 6px;
+      border-radius: 50%;
+      margin-right: 3px;
+      /* 移除边框和阴影，追求极简 */
+    }
+    .legend-dot.normal { background: #4b7b91; }
+    .legend-dot.rare { background: #f8c653; }
+    .legend-dot.very-rare { background: #ec6e5f; }
+
     .corner-logo {
       position: fixed;
-      left: 16px;
-      bottom: 16px;
+      right: 16px;
+      bottom: 40px;
       z-index: 1000;
       display: block;
-      /* 缩小为原来的一半 */
-      max-width: 100px;
-      max-height: 50px;
+      max-width: 70px;
+      max-height: 35px;
       width: auto;
       height: auto;
+      opacity: 0.9;
+      transition: opacity 0.3s;
+    }
+    .corner-logo:hover {
+      opacity: 1;
     }
     .corner-logo img {
       display: block;
@@ -48,35 +221,105 @@
       max-width: 100%;
       max-height: 100%;
     }
+    .icp-badge {
+      position: fixed;
+      right: 16px;
+      bottom: 24px;
+      z-index: 1000;
+      font-size: 8px;
+      color: #5e3643;
+      text-align: right;
+    }
+    .icp-badge a {
+      color: inherit;
+      text-decoration: none;
+    }
     .custom-marker {
-      background: #d4a574;
-      width: 36px;
-      height: 36px;
+      background: none;
+      border: none;
+    }
+    .marker-pin {
+      width: 100%;
+      height: 100%;
       border-radius: 50%;
-      border: 3px solid white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      border: 3px solid #fff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15); /* 更柔和的投影 */
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
+      box-sizing: border-box;
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .marker-pin:hover {
+      transform: scale(1.15);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
+    .marker-pin img {
+      width: 20px;
+      height: 20px;
+      display: block;
+      /* 让图标变成白色，符合扁平化设计 */
+      filter: brightness(0) invert(1);
     }
     .popup-content { text-align: center; min-width: 200px; }
     .popup-content img { max-width: 180px; border-radius: 8px; margin-top: 8px; }
     .popup-content h3 { margin-bottom: 8px; color: #333; font-size: 16px; }
     .popup-content p { color: #666; font-size: 13px; margin-bottom: 4px; }
+    .popup-content .uploader-id { font-size: 11px; color: #999; margin-top: 0; margin-bottom: 6px; }
   </style>
 </head>
 <body>
-  <a href="/upload.html" class="upload-btn">📷 上传花格</a>
+  <div id="map"></div>
   
+  <div class="glass-bar">
+    <a href="/" class="site-logo">
+      <img src="/assets/img/top-logo.png" alt="水泥花格地图" onerror="this.style.display='none'">
+    </a>
+    <div class="stats-badge">
+      <span id="workCount">...</span>
+      <span id="cityCount" style="margin-left:6px;"></span>
+    </div>
+    <div class="divider"></div>
+    <a href="/pokedex.html" class="upload-btn pokedex-btn" style="background: #fff; color: #5e3643; border: 1px solid #eee; box-shadow: none; margin-right: 4px;">
+      <span>📓</span>
+      <span>图鉴</span>
+    </a>
+    <a href="/upload.html" class="upload-btn upload-btn-upload">
+      <span>📷</span>
+      <span>上传</span>
+    </a>
+  </div>
+
   <a class="corner-logo" href="/" aria-label="Powered by 乔尔事务所">
     <img src="/assets/img/corner-logo.png" alt="Powered by 乔尔事务所" loading="lazy" onerror="this.onerror=null;this.src='/logo.svg'">
   </a>
   
-  <div id="map"></div>
-  
+  <div class="social-links">
+    <a href="https://xhslink.com/m/8FYR2izaPIt" target="_blank" class="social-btn xhs" aria-label="小红书">📕</a>
+    <a href="https://mp.weixin.qq.com/s/6sxEyKnz5kDuVZS8HaOpAA" target="_blank" class="social-btn wx" aria-label="公众号">❇️</a>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot normal"></div>
+      <span>普通</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot rare"></div>
+      <span>稀有</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot very-rare"></div>
+      <span>非常稀有</span>
+    </div>
+  </div>
+
   <script>
-    const map = L.map('map').setView([35.8617, 104.1954], 5);
+    const map = L.map('map', {
+      zoomControl: false // 禁用默认位置的缩放控件
+    }).setView([35.8617, 104.1954], 5);
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
     L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
       subdomains: ['1', '2', '3', '4'],
       maxZoom: 18,
@@ -85,12 +328,19 @@
 
     let markers = [];
 
-    const createIcon = () => {
+    const createIcon = (rarity) => {
+      let bgColor = '#4b7b91'; // 默认/普通
+      if (rarity === '非常稀有') bgColor = '#ec6e5f';
+      else if (rarity === '稀有') bgColor = '#f8c653';
+      
       return L.divIcon({
         className: 'custom-marker',
-        html: '<img src="/assets/img/window-flower-icon-small.png" style="width: 24px; height: 24px;">',
-        iconSize: [36, 36],
-        iconAnchor: [18, 18]
+        html: `<div class="marker-pin" style="background-color: ${bgColor};">
+                <img src="/assets/img/window-flower-icon-small.png">
+               </div>`,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+        popupAnchor: [0, -20]
       });
     };
 
@@ -119,10 +369,35 @@
       markers = [];
       
       const useHost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      
+      // 用来记录已存在的坐标，用于处理重叠
+      const existingCoords = new Set();
+      
       works.forEach(work => {
         if (work.location && work.location.lat && work.location.lng) {
-          const marker = L.marker([work.location.lat, work.location.lng], {
-            icon: createIcon()
+          let lat = parseFloat(work.location.lat);
+          let lng = parseFloat(work.location.lng);
+          
+          // 生成一个唯一的坐标键值
+          let coordKey = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+          
+          // 如果这个坐标已经存在，就加一点点随机偏移
+          let attempt = 0;
+          while (existingCoords.has(coordKey) && attempt < 10) {
+            // 偏移量：大约 5-10 米
+            // (Math.random() - 0.5) * 0.0002 产生 -0.0001 到 0.0001 的偏移
+            const offsetLat = (Math.random() - 0.5) * 0.00015;
+            const offsetLng = (Math.random() - 0.5) * 0.00015;
+            lat += offsetLat;
+            lng += offsetLng;
+            coordKey = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+            attempt++;
+          }
+          
+          existingCoords.add(coordKey);
+          
+          const marker = L.marker([lat, lng], {
+            icon: createIcon(work.rarity)
           }).addTo(map);
           
           let img = work.images && work.images[0] ? work.images[0] : '';
@@ -133,6 +408,7 @@
             <div class="popup-content">
               <h3>${work.title || '未命名花格'}</h3>
               <p>📍 ${work.location.address || '未知位置'}</p>
+              ${work.userId ? `<p class="uploader-id">👤 发现者：${work.userId}</p>` : ''}
               ${img ? 
                 `<img src="${img}" alt="${work.title || ''}" onerror="this.style.display='none'">` : ''}
             </div>
@@ -143,11 +419,36 @@
         }
       });
       
-      console.log(`已加载 ${works.length} 个作品`);
+      const countEl = document.getElementById('workCount');
+      const cityEl = document.getElementById('cityCount');
+      if (countEl) countEl.textContent = `记录：${works.length}`;
+      function parseCity(address) {
+        if (!address) return '';
+        const s = address.replace(/.*?省/, '');
+        const mCity = s.match(/([一-龥]{2,}市)/);
+        if (mCity) return mCity[1];
+        const municipalities = ['北京','上海','天津','重庆','香港','澳门','台湾'];
+        for (const name of municipalities) {
+          if (s.includes(name)) return ['香港','澳门','台湾'].includes(name) ? name : name + '市';
+        }
+        const common = ['深圳','广州','苏州','杭州','南京','武汉','西安','成都','郑州','青岛','厦门','福州','长沙','合肥','宁波','无锡','佛山','大连','沈阳'];
+        for (const name of common) {
+          if (s.includes(name)) return name + '市';
+        }
+        return '';
+      }
+      const cities = new Set();
+      works.forEach(w => {
+        const addr = (w.location && w.location.address) ? w.location.address : '';
+        const city = (w.location && w.location.city) ? w.location.city : parseCity(addr);
+        if (city) cities.add(city);
+      });
+      if (cityEl) cityEl.textContent = `城市：${cities.size}`;
     }
 
     loadWorks();
     setInterval(loadWorks, 30000);
   </script>
+  <div class="icp-badge"><a href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">粤ICP备2026024114号-1</a></div>
 </body>
 </html>
