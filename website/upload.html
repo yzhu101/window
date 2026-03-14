@@ -43,6 +43,7 @@
     .search-box input { flex: 1; }
     .search-box button { padding: 12px 20px; background: #5e3643; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
     .search-box button:disabled { background: #ccc; }
+    .locate-btn { background: #6b3c4a; }
     .location-info { background: #f5f1e6; padding: 12px; border-radius: 8px; margin-top: 10px; font-size: 14px; color: #666; border: 1px solid rgba(94,54,67,0.1); }
     .location-info span { color: #5e3643; font-weight: 600; }
     .upload-area { border: 2px dashed #5e3643; border-radius: 8px; padding: 40px; text-align: center; cursor: pointer; background: rgba(94,54,67,0.02); transition: all 0.2s; }
@@ -190,11 +191,12 @@
       
       <div class="form-group">
         <label class="required">位置</label>
-        <div class="tips">💡 提示：输入地址搜索，或在地图上点击选择位置</div>
+        <div class="tips">💡 提示：输入地址搜索或在地图上点击位置，也可以选择定位当前位置</div>
         
         <div class="search-box">
           <input type="text" id="addressInput" placeholder="输入地址，如：北京市朝阳区三里屯">
-          <button type="button" onclick="searchAddress()" id="searchBtn">🔍 搜索</button>
+          <button type="button" onclick="searchAddress()" id="searchBtn" aria-label="搜索">🔍</button>
+          <button type="button" onclick="useCurrentLocation()" id="locateBtn" class="locate-btn" aria-label="使用当前位置">📍</button>
         </div>
         
         <div id="map"></div>
@@ -218,6 +220,8 @@
 
   <script>
     const TENCENT_KEY = '3DABZ-G6ECJ-2HZFC-XHP5I-KESCS-ILBMT';
+    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    const API_BASE = window.API_BASE || (isLocal ? 'http://localhost:3000' : '');
     
     const map = L.map('map').setView([35.8617, 104.1954], 5);
     L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
@@ -259,7 +263,7 @@
       
       const btn = document.getElementById('searchBtn');
       btn.disabled = true;
-      btn.innerHTML = '<span class="loading"></span>搜索中...';
+      btn.innerHTML = '<span class="loading"></span>';
       
       const callbackName = 'tencentGeocode_' + Date.now();
       window[callbackName] = function(data) {
@@ -267,7 +271,7 @@
         document.head.removeChild(script);
         
         btn.disabled = false;
-        btn.innerHTML = '🔍 搜索';
+        btn.innerHTML = '🔍';
         
         console.log('腾讯地图返回:', data);
         
@@ -292,7 +296,7 @@
         delete window[callbackName];
         document.head.removeChild(script);
         btn.disabled = false;
-        btn.innerHTML = '🔍 搜索';
+        btn.innerHTML = '🔍';
         alert('网络请求失败，请检查网络连接');
       };
       
@@ -301,7 +305,7 @@
           delete window[callbackName];
           if (script.parentNode) document.head.removeChild(script);
           btn.disabled = false;
-          btn.innerHTML = '🔍 搜索';
+          btn.innerHTML = '🔍';
           alert('请求超时，请重试');
         }
       }, 10000);
@@ -341,6 +345,29 @@
       }, 10000);
       
       document.head.appendChild(script);
+    }
+    
+    function useCurrentLocation() {
+      const btn = document.getElementById('locateBtn');
+      if (!navigator.geolocation) { alert('当前浏览器不支持定位'); return; }
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading"></span>';
+      navigator.geolocation.getCurrentPosition(function(pos) {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setLocation(lat, lng, null);
+        map.setView([lat, lng], 15);
+        btn.disabled = false;
+        btn.innerHTML = '📍';
+      }, function(err) {
+        let msg = '定位失败，请检查权限设置';
+        if (err && err.code === 1) msg = '定位被拒绝，请在浏览器设置中允许位置权限';
+        if (err && err.code === 2) msg = '定位不可用，请稍后重试';
+        if (err && err.code === 3) msg = '定位超时，请重试';
+        alert(msg);
+        btn.disabled = false;
+        btn.innerHTML = '📍';
+      }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
     }
     
     // 稀有度按钮交互
@@ -385,18 +412,19 @@
         formData.append('lng', currentLng);
         formData.append('address', document.getElementById('address').value || '');
         
-        const response = await fetch('/api/works', { method: 'POST', body: formData });
+        const response = await fetch(`${API_BASE}/api/works`, { method: 'POST', body: formData });
         
         if (response.ok) {
           document.querySelector('.container').innerHTML = '<div class="success-msg"><h2>✅ 上传成功！</h2><p>感谢您的分享，您的花格已提交审核。</p><p style="margin-top: 15px;"><a href="/" style="color: #5e3643; font-weight: bold; margin-right: 20px;">返回地图</a><a href="/upload.html" style="color: #5e3643; font-weight: bold;">继续上传</a></p></div>';
         } else {
           const error = await response.json();
-          alert('上传失败: ' + (error.error || '请重试'));
+          alert('上传失败 (' + response.status + '): ' + (error.error || '请重试'));
           submitBtn.disabled = false;
           submitBtn.innerHTML = '<img src="/assets/img/window-flower-icon-small.png" alt="icon"> 提交';
         }
       } catch (error) {
-        alert('上传失败，请检查网络连接');
+        console.error('上传出错:', error);
+        alert('上传请求失败，请检查网络连接或服务器状态 (' + error.message + ')');
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<img src="/assets/img/window-flower-icon-small.png" alt="icon"> 提交';
       }

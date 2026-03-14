@@ -257,6 +257,7 @@
   </div>
 
   <script>
+    const API_BASE = window.API_BASE || '';
     // 检查登录状态
     function checkLogin() {
       const cookies = document.cookie.split(';');
@@ -323,7 +324,7 @@
     
     async function loadWorks() {
       try {
-        const r = await fetch('/api/works/admin/all');
+        const r = await fetch(`${API_BASE}/api/works/admin/all`);
         if (r.ok) {
           const result = await r.json();
           allWorks = result.data || result || [];
@@ -518,7 +519,7 @@
       };
       
       try {
-        const response = await fetch(`/api/works/${currentEditId}`, {
+        const response = await fetch(`${API_BASE}/api/works/${currentEditId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -541,7 +542,7 @@
       if (!confirm(`确定要${action}这个作品吗？`)) return;
       
       try {
-        const response = await fetch(`/api/works/${id}/status`, {
+        const response = await fetch(`${API_BASE}/api/works/${id}/status`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status })
@@ -563,7 +564,7 @@
       if (!confirm('确定要删除这个作品吗？此操作不可恢复！')) return;
       
       try {
-        const response = await fetch(`/api/works/${id}`, {
+        const response = await fetch(`${API_BASE}/api/works/${id}`, {
           method: 'DELETE'
         });
         

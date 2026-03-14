@@ -316,6 +316,8 @@
   </div>
 
   <script>
+    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    const API_BASE = isLocal ? 'http://localhost:3000' : '';
     const map = L.map('map', {
       zoomControl: false // 禁用默认位置的缩放控件
     }).setView([35.8617, 104.1954], 5);
@@ -347,7 +349,7 @@
     async function loadWorks() {
       let works = [];
       try {
-        const r = await fetch('/api/works');
+        const r = await fetch(`${API_BASE}/api/works`);
         if (r.ok) {
           const result = await r.json();
           works = result.data || result || [];
@@ -401,9 +403,6 @@
           }).addTo(map);
           
           let img = work.images && work.images[0] ? work.images[0] : '';
-          if (img && img.startsWith('/uploads') && useHost) {
-            img = 'http://111.230.204.154' + img;
-          }
           const popupContent = `
             <div class="popup-content">
               <h3>${work.title || '未命名花格'}</h3>

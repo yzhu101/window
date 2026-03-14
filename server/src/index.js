@@ -5,15 +5,40 @@ import COS from 'cos-nodejs-sdk-v5'
 import mongoose from 'mongoose'
 import { nanoid } from 'nanoid'
 import mime from 'mime-types'
+import { promises as fs } from 'fs'
+import path from 'path'
 
 const app = express()
 app.use(express.json())
+
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Token, Accept, Origin')
+  if (req.method === 'OPTIONS') return res.sendStatus(200)
+  next()
+})
 
 const MONGODB_URI = process.env.MONGODB_URI || ''
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'huage_admin_2024'
 const PORT = process.env.PORT || 3000
 
-await mongoose.connect(MONGODB_URI)
+// 本地内存存储（用于无MongoDB的本地开发）
+let localWorks = []
+let useDb = false
+
+// 尝试连接MongoDB，如果失败则使用内存存储
+try {
+  if (MONGODB_URI) {
+    await mongoose.connect(MONGODB_URI)
+    console.log('已连接到MongoDB')
+    useDb = true
+  } else {
+    console.log('未配置MongoDB，使用内存存储模式')
+  }
+} catch (error) {
+  console.log('MongoDB连接失败，使用内存存储模式:', error.message)
+}
 
 const workSchema = new mongoose.Schema({
   title: String,
@@ -35,15 +60,18 @@ const Work = mongoose.model('Work', workSchema)
 
 const upload = multer({ storage: multer.memoryStorage() })
 
-const cos = new COS({
-  SecretId: process.env.COS_SECRET_ID,
-  SecretKey: process.env.COS_SECRET_KEY
-})
-
+const COS_SECRET_ID = process.env.COS_SECRET_ID
+const COS_SECRET_KEY = process.env.COS_SECRET_KEY
 const COS_BUCKET = process.env.COS_BUCKET
 const COS_REGION = process.env.COS_REGION
 const UPLOAD_PREFIX = process.env.UPLOAD_PREFIX || 'uploads/'
 const UPLOAD_BASE = process.env.UPLOAD_BASE || ''
+
+// 只有在配置了COS密钥时才初始化COS客户端
+const cos = (COS_SECRET_ID && COS_SECRET_KEY) ? new COS({
+  SecretId: COS_SECRET_ID,
+  SecretKey: COS_SECRET_KEY
+}) : null
 
 function computeCity(address = '') {
   if (!address) return ''
@@ -69,8 +97,19 @@ function requireAdmin(req, res, next) {
 }
 
 app.get('/api/works', async (req, res) => {
-  const items = await Work.find({ status: 'approved' }).sort({ createdAt: -1 })
-  res.json({ success: true, data: items })
+  try {
+    if (useDb) {
+      const items = await Work.find({ status: 'approved' }).sort({ createdAt: -1 })
+      res.json({ success: true, data: items })
+    } else {
+      const items = localWorks.filter(work => work.status === 'approved')
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      res.json({ success: true, data: items })
+    }
+  } catch (error) {
+    console.error('获取作品失败:', error)
+    res.status(500).json({ error: '获取作品失败' })
+  }
 })
 
 app.get('/api/works/admin/all', requireAdmin, async (req, res) => {
@@ -84,40 +123,79 @@ app.post('/api/works', upload.array('images'), async (req, res) => {
     const files = req.files || []
     const uploadedUrls = []
 
-    for (const f of files) {
-      const ext = mime.extension(f.mimetype) || 'jpg'
-      const key = `${UPLOAD_PREFIX}${nanoid()}.${ext}`
-      await new Promise((resolve, reject) => {
-        cos.putObject({
-          Bucket: COS_BUCKET,
-          Region: COS_REGION,
-          Key: key,
-          Body: f.buffer,
-          ContentType: f.mimetype
-        }, (err, data) => {
-          if (err) reject(err)
-          else resolve(data)
+    // 本地开发模式：如果没有配置COS，使用本地存储路径
+    if (!COS_BUCKET || !COS_SECRET_ID || !COS_SECRET_KEY) {
+      const uploadsDir = path.resolve(process.cwd(), '../website/uploads')
+      await fs.mkdir(uploadsDir, { recursive: true })
+      for (const f of files) {
+        const ext = mime.extension(f.mimetype) || 'jpg'
+        const filename = `${nanoid()}.${ext}`
+        const filePath = path.join(uploadsDir, filename)
+        await fs.writeFile(filePath, f.buffer)
+        const url = `/uploads/${filename}`
+        uploadedUrls.push(url)
+      }
+    } else {
+      // 生产模式：上传到COS
+      for (const f of files) {
+        const ext = mime.extension(f.mimetype) || 'jpg'
+        const key = `${UPLOAD_PREFIX}${nanoid()}.${ext}`
+        await new Promise((resolve, reject) => {
+          cos.putObject({
+            Bucket: COS_BUCKET,
+            Region: COS_REGION,
+            Key: key,
+            Body: f.buffer,
+            ContentType: f.mimetype
+          }, (err, data) => {
+            if (err) reject(err)
+            else resolve(data)
+          })
         })
-      })
-      const url = UPLOAD_BASE ? `${UPLOAD_BASE}/${key}` : key
-      uploadedUrls.push(url)
+        const url = UPLOAD_BASE ? `${UPLOAD_BASE}/${key}` : key
+        uploadedUrls.push(url)
+      }
     }
 
-    const doc = await Work.create({
-      title,
-      description,
-      userId,
-      rarity,
-      images: uploadedUrls,
-      tags: [],
-      status: 'pending',
-      location: {
-        lat: lat ? Number(lat) : undefined,
-        lng: lng ? Number(lng) : undefined,
-        address,
-        city: computeCity(address)
+    let doc
+    if (useDb) {
+      doc = await Work.create({
+        title,
+        description,
+        userId,
+        rarity,
+        images: uploadedUrls,
+        tags: [],
+        status: 'pending',
+        location: {
+          lat: lat ? Number(lat) : undefined,
+          lng: lng ? Number(lng) : undefined,
+          address,
+          city: computeCity(address)
+        }
+      })
+    } else {
+      doc = {
+        _id: nanoid(),
+        title,
+        description,
+        userId,
+        rarity,
+        images: uploadedUrls,
+        tags: [],
+        status: 'pending',
+        location: {
+          lat: lat ? Number(lat) : undefined,
+          lng: lng ? Number(lng) : undefined,
+          address,
+          city: computeCity(address)
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
       }
-    })
+      localWorks.push(doc)
+      console.log('新增作品到内存存储:', doc.title)
+    }
     res.json({ success: true, data: doc })
   } catch (e) {
     res.status(400).json({ error: e.message || 'upload failed' })
