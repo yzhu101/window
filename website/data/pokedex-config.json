@@ -1,0 +1,35 @@
+{
+  "types": [
+    {
+      "key": "bird",
+      "label": "🪽 鸟类纹系",
+      "description": "线条如同飞翔的海鸥，也像波浪，是最具代表性的花格类型。"
+    },
+    {
+      "key": "geometric",
+      "label": "💠 几何纹系",
+      "description": "由基础几何图形构成的严谨图案。"
+    },
+    {
+      "key": "flower",
+      "label": "🌷 花草纹系",
+      "description": "以花瓣、枝叶与藤蔓为母题的柔和纹样。"
+    },
+    {
+      "key": "other",
+      "label": "❓ 其他纹系",
+      "description": "尚未分类的未知纹样，待后续补充。"
+    },
+    {
+      "key": "11",
+      "label": "11",
+      "description": "1111"
+    }
+  ],
+  "categories": [
+    "原型",
+    "结构",
+    "材质",
+    "其他"
+  ]
+}

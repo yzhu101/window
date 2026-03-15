@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>图鉴管理 - 水泥花格地图</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+    }
+    .header {
+      background: #333;
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { font-size: 20px; }
+    .header a { color: #d4a574; text-decoration: none; margin-right: 15px; }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .toolbar {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      color: white;
+      background: #d4a574;
+    }
+    .btn-primary { background: #d4a574; }
+    .btn-danger { background: #f44336; }
+    .btn-edit { background: #2196f3; margin-right: 5px; }
+    
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .data-table th, .data-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    .data-table th {
+      background: #f9f9f9;
+      font-weight: 600;
+    }
+    .icon-preview {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      background: #eee;
+      border-radius: 4px;
+    }
+    
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    .modal h2 { margin-top: 0; margin-bottom: 20px; color: #333; }
+    .form-row { margin-bottom: 16px; }
+    .form-row label { display: block; margin-bottom: 8px; color: #666; font-weight: 500; }
+    .form-row input, .form-row select, .form-row textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .form-row small { color: #999; font-size: 12px; }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 24px;
+    }
+    .btn-cancel { background: #eee; color: #333; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📖 图鉴管理 - 水泥花格地图</h1>
+    <div>
+      <a href="/admin.html">返回审核后台</a>
+      <a href="/">返回地图</a>
+      <button class="btn" style="background: transparent; border: 1px solid #d4a574; padding: 6px 12px;" onclick="logout()">退出登录</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="openModal()">+ 添加新图鉴</button>
+      <button class="btn btn-secondary" style="background: #607d8b; margin-left: 10px;" onclick="openConfigModal()">⚙️ 管理分类与类型</button>
+    </div>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>图标</th>
+          <th>名称</th>
+          <th>类型</th>
+          <th>分类</th>
+          <th>父级ID</th>
+          <th>排序</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="pokedexList">
+        <!-- data here -->
+      </tbody>
+    </table>
+  </div>
+
+  <div id="editModal" class="modal-overlay">
+    <div class="modal">
+      <h2 id="modalTitle">添加图鉴</h2>
+      <form id="editForm" onsubmit="savePokedex(event)">
+        <div class="form-row">
+          <label>ID (唯一标识)</label>
+          <input type="text" name="id" required placeholder="例如: 001, 001-1">
+        </div>
+        <div class="form-row">
+          <label>名称</label>
+          <input type="text" name="name" required>
+        </div>
+        <div class="form-row">
+          <label>类型 (Type)</label>
+          <select name="type">
+            <option value="bird">鸟类纹系 (bird)</option>
+            <option value="geometric">几何纹系 (geometric)</option>
+            <option value="flower">花草纹系 (flower)</option>
+            <option value="other">其他 (other)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>分类 (Category)</label>
+          <select name="category">
+            <option value="原型">原型</option>
+            <option value="结构">结构</option>
+            <option value="材质">材质</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>描述</label>
+          <textarea name="description" rows="3"></textarea>
+        </div>
+        <div class="form-row">
+          <label>父级ID (可选)</label>
+          <input type="text" name="parentId" placeholder="如果是子变体，填入父级ID">
+        </div>
+        <div class="form-row">
+          <label>排序 (数字越小越靠前)</label>
+          <input type="number" name="sortOrder" value="0">
+        </div>
+        <div class="form-row">
+          <label>图标上传</label>
+          <input type="file" name="icon" accept="image/*">
+          <input type="hidden" name="iconUrl">
+          <div id="iconPreview" style="margin-top: 10px;"></div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-cancel" onclick="closeModal()">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="configModal" class="modal-overlay">
+    <div class="modal">
+      <h2>⚙️ 管理分类与类型</h2>
+      
+      <div style="margin-bottom: 20px;">
+        <h3>类型 (Types)</h3>
+        <p style="color: #666; font-size: 12px; margin-bottom: 8px;">对应首页的大分类，如“鸟类纹系”。Key必须是英文。</p>
+        <div id="typesList" style="margin-bottom: 10px;"></div>
+        <button class="btn btn-edit" style="font-size: 12px;" onclick="addType()">+ 添加类型</button>
+      </div>
+
+      <div style="border-top: 1px solid #eee; padding-top: 20px;">
+        <h3>分类 (Categories)</h3>
+        <p style="color: #666; font-size: 12px; margin-bottom: 8px;">对应单个图鉴的标签，如“原型”、“结构”。</p>
+        <div id="catsList" style="margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
+        <button class="btn btn-edit" style="font-size: 12px;" onclick="addCategory()">+ 添加分类</button>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-cancel" onclick="closeConfigModal()">关闭</button>
+        <button class="btn btn-primary" onclick="saveConfig()">保存全部配置</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.API_BASE || '';
+    
+    let config = { types: [], categories: [] };
+    
+    async function loadConfig() {
+      try {
+        const res = await fetch(`${API_BASE}/api/pokedex/config`);
+        const json = await res.json();
+        config = json.data || { types: [], categories: [] };
+        // Update select options in edit form
+        updateFormOptions();
+      } catch (e) {
+        console.error('Failed to load config', e);
+      }
+    }
+    
+    function updateFormOptions() {
+      const typeSelect = document.querySelector('select[name="type"]');
+      const catSelect = document.querySelector('select[name="category"]');
+      
+      if (typeSelect) {
+        typeSelect.innerHTML = config.types.map(t => 
+          `<option value="${t.key}">${t.label} (${t.key})</option>`
+        ).join('');
+      }
+      
+      if (catSelect) {
+        catSelect.innerHTML = config.categories.map(c => 
+          `<option value="${c}">${c}</option>`
+        ).join('');
+      }
+    }
+
+    // Config Modal Logic
+    function openConfigModal() {
+      renderConfigUI();
+      document.getElementById('configModal').style.display = 'flex';
+    }
+    
+    function closeConfigModal() {
+      document.getElementById('configModal').style.display = 'none';
+    }
+    
+    function renderConfigUI() {
+      const typesList = document.getElementById('typesList');
+      typesList.innerHTML = config.types.map((t, idx) => `
+        <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+          <input type="text" placeholder="Key (e.g. bird)" value="${t.key}" style="width: 80px; padding: 4px;" onchange="updateType(${idx}, 'key', this.value)">
+          <input type="text" placeholder="Label (e.g. 鸟类)" value="${t.label}" style="flex: 1; padding: 4px;" onchange="updateType(${idx}, 'label', this.value)">
+          <input type="text" placeholder="Desc" value="${t.description || ''}" style="flex: 1; padding: 4px;" onchange="updateType(${idx}, 'description', this.value)">
+          <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="removeType(${idx})">×</button>
+        </div>
+      `).join('');
+      
+      const catsList = document.getElementById('catsList');
+      catsList.innerHTML = config.categories.map((c, idx) => `
+        <div style="display: inline-flex; gap: 4px; align-items: center; background: #eee; padding: 4px 8px; border-radius: 4px;">
+          <input type="text" value="${c}" style="width: 60px; border: none; background: transparent;" onchange="updateCategory(${idx}, this.value)">
+          <span style="cursor: pointer; color: red; font-weight: bold;" onclick="removeCategory(${idx})">×</span>
+        </div>
+      `).join('');
+    }
+    
+    window.addType = function() {
+      config.types.push({ key: '', label: '', description: '' });
+      renderConfigUI();
+    }
+    
+    window.removeType = function(idx) {
+      if (!confirm('确定删除该类型吗？')) return;
+      config.types.splice(idx, 1);
+      renderConfigUI();
+    }
+    
+    window.updateType = function(idx, field, val) {
+      config.types[idx][field] = val;
+    }
+    
+    window.addCategory = function() {
+      config.categories.push('新分类');
+      renderConfigUI();
+    }
+    
+    window.removeCategory = function(idx) {
+      config.categories.splice(idx, 1);
+      renderConfigUI();
+    }
+    
+    window.updateCategory = function(idx, val) {
+      config.categories[idx] = val;
+    }
+    
+    window.saveConfig = async function() {
+      try {
+        const res = await fetch(`${API_BASE}/api/pokedex/config`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config)
+        });
+        if (res.ok) {
+          alert('配置已保存！');
+          updateFormOptions();
+          closeConfigModal();
+        } else {
+          alert('保存失败');
+        }
+      } catch (e) {
+        alert('网络错误');
+      }
+    }
+
+    // Auth check
+    function checkLogin() {
+      const cookies = document.cookie.split(';');
+      const hasToken = cookies.some(c => c.trim().startsWith('admin_token='));
+      if (!hasToken) {
+        window.location.href = '/login.html';
+        return false;
+      }
+      return true;
+    }
+    
+    function logout() {
+      document.cookie = 'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      window.location.href = '/login.html';
+    }
+
+    if (!checkLogin()) throw new Error('Unauthorized');
+
+    let allData = [];
+    let isEditing = false;
+
+    async function loadData() {
+      await loadConfig(); // Load config first
+      try {
+        const res = await fetch(`${API_BASE}/api/pokedex`);
+        const result = await res.json();
+        allData = result.data || [];
+        renderTable();
+      } catch (e) {
+        alert('加载失败: ' + e.message);
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('pokedexList');
+      tbody.innerHTML = allData.map(item => `
+        <tr>
+          <td>${item.id}</td>
+          <td><img src="${item.icon || ''}" class="icon-preview" onerror="this.style.display='none'"></td>
+          <td>${item.name}</td>
+          <td>${item.type}</td>
+          <td>${item.category}</td>
+          <td>${item.parentId || '-'}</td>
+          <td>${item.sortOrder || 0}</td>
+          <td>
+            <button class="btn btn-edit" onclick="editItem('${item.id}')">编辑</button>
+            <button class="btn btn-danger" onclick="deleteItem('${item.id}')" style="padding: 6px 12px; font-size: 12px;">删除</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    const modal = document.getElementById('editModal');
+    const form = document.getElementById('editForm');
+    const title = document.getElementById('modalTitle');
+
+    function openModal() {
+      isEditing = false;
+      title.textContent = '添加新图鉴';
+      form.reset();
+      form.id.readOnly = false;
+      document.getElementById('iconPreview').innerHTML = '';
+      modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+      modal.style.display = 'none';
+    }
+
+    window.editItem = function(id) {
+      const item = allData.find(d => d.id === id);
+      if (!item) return;
+      
+      isEditing = true;
+      title.textContent = '编辑图鉴';
+      
+      // Fill form
+      form.id.value = item.id;
+      form.id.readOnly = true; // ID cannot be changed
+      form.name.value = item.name;
+      form.type.value = item.type;
+      form.category.value = item.category;
+      form.description.value = item.description || '';
+      form.parentId.value = item.parentId || '';
+      form.sortOrder.value = item.sortOrder || 0;
+      form.iconUrl.value = item.icon || '';
+      
+      if (item.icon) {
+        document.getElementById('iconPreview').innerHTML = `<img src="${item.icon}" style="height: 50px;">`;
+      } else {
+        document.getElementById('iconPreview').innerHTML = '';
+      }
+
+      modal.style.display = 'flex';
+    }
+
+    window.deleteItem = async function(id) {
+      if (!confirm('确定要删除吗？')) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/pokedex/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          loadData();
+        } else {
+          alert('删除失败');
+        }
+      } catch (e) {
+        alert('错误: ' + e.message);
+      }
+    }
+
+    window.savePokedex = async function(e) {
+      e.preventDefault();
+      const formData = new FormData(form);
+      
+      // If parentId is empty string, make it null/undefined logic is handled by backend or just empty string
+      
+      const method = isEditing ? 'PUT' : 'POST';
+      const url = isEditing ? `${API_BASE}/api/pokedex/${form.id.value}` : `${API_BASE}/api/pokedex`;
+
+      try {
+        const res = await fetch(url, {
+          method: method,
+          body: formData
+        });
+        
+        if (res.ok) {
+          closeModal();
+          loadData();
+        } else {
+          const err = await res.json();
+          alert('保存失败: ' + (err.error || '未知错误'));
+        }
+      } catch (e) {
+        alert('网络错误: ' + e.message);
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>

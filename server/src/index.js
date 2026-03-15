@@ -1,4 +1,5 @@
 import 'dotenv/config'
+console.log('Starting server...')
 import express from 'express'
 import multer from 'multer'
 import COS from 'cos-nodejs-sdk-v5'
@@ -9,7 +10,11 @@ import { promises as fs } from 'fs'
 import path from 'path'
 
 const app = express()
+console.log('Express app created')
 app.use(express.json())
+
+// Serve static files from website directory
+app.use(express.static(path.resolve(process.cwd(), '../website')))
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -29,8 +34,10 @@ let useDb = false
 
 // 尝试连接MongoDB，如果失败则使用内存存储
 try {
+  console.log('Checking MongoDB config...')
   if (MONGODB_URI) {
-    await mongoose.connect(MONGODB_URI)
+    console.log('Connecting to MongoDB...')
+    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 })
     console.log('已连接到MongoDB')
     useDb = true
   } else {
@@ -57,6 +64,78 @@ const workSchema = new mongoose.Schema({
 }, { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } })
 
 const Work = mongoose.model('Work', workSchema)
+
+const pokedexSchema = new mongoose.Schema({
+  id: String, // unique id like "001", "001-1"
+  name: String,
+  type: String, // bird, geometric, flower, etc.
+  category: String, // 原型, 结构, etc.
+  description: String,
+  icon: String, // url to image
+  parentId: String, // parent id for tree structure
+  sortOrder: Number
+}, { timestamps: true })
+
+const Pokedex = mongoose.model('Pokedex', pokedexSchema)
+
+// Local storage for Pokedex
+let localPokedex = []
+const POKEDEX_FILE = path.resolve(process.cwd(), '../website/data/pokedex.json')
+
+// Local storage for Pokedex Config
+let localPokedexConfig = { types: [], categories: [] }
+const POKEDEX_CONFIG_FILE = path.resolve(process.cwd(), '../website/data/pokedex-config.json')
+
+async function loadPokedexConfig() {
+  try {
+    const data = await fs.readFile(POKEDEX_CONFIG_FILE, 'utf-8')
+    localPokedexConfig = JSON.parse(data)
+    console.log('Loaded pokedex config')
+  } catch (e) {
+    console.log('No local pokedex config found, using defaults')
+    localPokedexConfig = {
+       types: [
+         { "key": "bird", "label": "🪽 鸟类纹系", "description": "线条如同飞翔的海鸥，也像波浪，是最具代表性的花格类型。" },
+         { "key": "geometric", "label": "💠 几何纹系", "description": "由基础几何图形构成的严谨图案。" },
+         { "key": "flower", "label": "🌷 花草纹系", "description": "以花瓣、枝叶与藤蔓为母题的柔和纹样。" },
+         { "key": "other", "label": "❓ 其他纹系", "description": "尚未分类的未知纹样，待后续补充。" }
+       ],
+       categories: ["原型", "结构", "材质", "其他"]
+    }
+    await savePokedexConfig()
+  }
+}
+loadPokedexConfig()
+
+async function savePokedexConfig() {
+  try {
+    await fs.writeFile(POKEDEX_CONFIG_FILE, JSON.stringify(localPokedexConfig, null, 2))
+  } catch (e) {
+    console.error('Error saving pokedex config:', e)
+  }
+}
+
+// Load initial pokedex data
+async function loadPokedex() {
+  try {
+    const data = await fs.readFile(POKEDEX_FILE, 'utf-8')
+    localPokedex = JSON.parse(data)
+    console.log(`Loaded ${localPokedex.length} pokedex entries from file`)
+  } catch (e) {
+    console.log('No local pokedex file found or error reading it, starting empty')
+    localPokedex = []
+  }
+}
+loadPokedex()
+
+async function savePokedex() {
+  try {
+    await fs.writeFile(POKEDEX_FILE, JSON.stringify(localPokedex, null, 2))
+    console.log('Saved pokedex to file')
+  } catch (e) {
+    console.error('Error saving pokedex file:', e)
+  }
+}
 
 const upload = multer({ storage: multer.memoryStorage() })
 
@@ -268,6 +347,175 @@ app.post('/api/tools/backfill-city', requireAdmin, async (req, res) => {
     res.json({ success: true, scanned: items.length, updated, cityCount: distinctCities.length })
   } catch (e) {
     res.status(500).json({ error: e.message || 'backfill failed' })
+  }
+})
+
+// Pokedex APIs
+app.get('/api/pokedex/config', async (req, res) => {
+  res.json({ success: true, data: localPokedexConfig })
+})
+
+app.put('/api/pokedex/config', requireAdmin, async (req, res) => {
+  try {
+    const { types, categories } = req.body
+    if (types && Array.isArray(types)) localPokedexConfig.types = types
+    if (categories && Array.isArray(categories)) localPokedexConfig.categories = categories
+    await savePokedexConfig()
+    res.json({ success: true, data: localPokedexConfig })
+  } catch (e) {
+    res.status(500).json({ error: 'save config failed' })
+  }
+})
+
+app.get('/api/pokedex', async (req, res) => {
+  try {
+    if (useDb) {
+      const items = await Pokedex.find({}).sort({ sortOrder: 1 })
+      res.json({ success: true, data: items })
+    } else {
+      res.json({ success: true, data: localPokedex.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)) })
+    }
+  } catch (error) {
+    console.error('获取图鉴失败:', error)
+    res.status(500).json({ error: '获取图鉴失败' })
+  }
+})
+
+app.post('/api/pokedex', requireAdmin, upload.single('icon'), async (req, res) => {
+  try {
+    const { id, name, type, category, description, parentId, sortOrder } = req.body
+    let iconUrl = req.body.iconUrl || ''
+    
+    // Handle file upload if present
+    if (req.file) {
+      const f = req.file
+      // Logic similar to existing upload
+      if (!COS_BUCKET || !COS_SECRET_ID || !COS_SECRET_KEY) {
+        const uploadsDir = path.resolve(process.cwd(), '../website/uploads')
+        await fs.mkdir(uploadsDir, { recursive: true })
+        const ext = mime.extension(f.mimetype) || 'png'
+        const filename = `pokedex-${nanoid()}.${ext}`
+        const filePath = path.join(uploadsDir, filename)
+        await fs.writeFile(filePath, f.buffer)
+        iconUrl = `/uploads/${filename}`
+      } else {
+         const ext = mime.extension(f.mimetype) || 'png'
+         const key = `${UPLOAD_PREFIX}pokedex-${nanoid()}.${ext}`
+         await new Promise((resolve, reject) => {
+            cos.putObject({
+              Bucket: COS_BUCKET,
+              Region: COS_REGION,
+              Key: key,
+              Body: f.buffer,
+              ContentType: f.mimetype
+            }, (err, data) => {
+              if (err) reject(err)
+              else resolve(data)
+            })
+         })
+         iconUrl = UPLOAD_BASE ? `${UPLOAD_BASE}/${key}` : key
+      }
+    }
+
+    const newEntry = {
+      id: id || nanoid(6),
+      name,
+      type,
+      category,
+      description,
+      icon: iconUrl,
+      parentId: parentId || null,
+      sortOrder: Number(sortOrder) || 0
+    }
+
+    if (useDb) {
+      const doc = await Pokedex.create(newEntry)
+      res.json({ success: true, data: doc })
+    } else {
+      localPokedex.push(newEntry)
+      await savePokedex()
+      res.json({ success: true, data: newEntry })
+    }
+  } catch (e) {
+    res.status(400).json({ error: e.message || 'create failed' })
+  }
+})
+
+app.put('/api/pokedex/:id', requireAdmin, upload.single('icon'), async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name, type, category, description, parentId, sortOrder } = req.body
+    let iconUrl = req.body.iconUrl
+
+    // Handle file upload if present
+    if (req.file) {
+      const f = req.file
+      if (!COS_BUCKET || !COS_SECRET_ID || !COS_SECRET_KEY) {
+        const uploadsDir = path.resolve(process.cwd(), '../website/uploads')
+        await fs.mkdir(uploadsDir, { recursive: true })
+        const ext = mime.extension(f.mimetype) || 'png'
+        const filename = `pokedex-${nanoid()}.${ext}`
+        const filePath = path.join(uploadsDir, filename)
+        await fs.writeFile(filePath, f.buffer)
+        iconUrl = `/uploads/${filename}`
+      } else {
+         const ext = mime.extension(f.mimetype) || 'png'
+         const key = `${UPLOAD_PREFIX}pokedex-${nanoid()}.${ext}`
+         await new Promise((resolve, reject) => {
+            cos.putObject({
+              Bucket: COS_BUCKET,
+              Region: COS_REGION,
+              Key: key,
+              Body: f.buffer,
+              ContentType: f.mimetype
+            }, (err, data) => {
+              if (err) reject(err)
+              else resolve(data)
+            })
+         })
+         iconUrl = UPLOAD_BASE ? `${UPLOAD_BASE}/${key}` : key
+      }
+    }
+
+    const updateData = {
+      name, type, category, description, 
+      parentId: parentId || null, 
+      sortOrder: Number(sortOrder) || 0
+    }
+    if (iconUrl) updateData.icon = iconUrl
+
+    if (useDb) {
+      const item = await Pokedex.findOneAndUpdate({ id: id }, updateData, { new: true })
+      if (!item) return res.status(404).json({ error: 'not found' })
+      res.json({ success: true, data: item })
+    } else {
+      const idx = localPokedex.findIndex(p => p.id === id)
+      if (idx === -1) return res.status(404).json({ error: 'not found' })
+      
+      localPokedex[idx] = { ...localPokedex[idx], ...updateData }
+      await savePokedex()
+      res.json({ success: true, data: localPokedex[idx] })
+    }
+  } catch (e) {
+    res.status(400).json({ error: e.message || 'update failed' })
+  }
+})
+
+app.delete('/api/pokedex/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params
+    if (useDb) {
+      await Pokedex.findOneAndDelete({ id: id })
+    } else {
+      const idx = localPokedex.findIndex(p => p.id === id)
+      if (idx !== -1) {
+        localPokedex.splice(idx, 1)
+        await savePokedex()
+      }
+    }
+    res.json({ success: true })
+  } catch (e) {
+    res.status(400).json({ error: e.message || 'delete failed' })
   }
 })
 

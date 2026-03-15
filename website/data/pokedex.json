@@ -1,0 +1,92 @@
+[
+  {
+    "id": "001",
+    "name": "基础海鸥纹",
+    "type": "bird",
+    "category": "原型",
+    "description": "线条如同飞翔的海鸥，是最具代表性的花格类型。",
+    "icon": "/assets/img/001.png",
+    "parentId": null,
+    "sortOrder": 1
+  },
+  {
+    "id": "001-1",
+    "name": "极简海鸥",
+    "type": "bird",
+    "category": "结构",
+    "description": "",
+    "icon": "/assets/img/001-1.png",
+    "parentId": "001",
+    "sortOrder": 2
+  },
+  {
+    "id": "002",
+    "name": "基础白鸽纹",
+    "type": "bird",
+    "category": "原型",
+    "description": "",
+    "icon": "/assets/img/009.png",
+    "parentId": null,
+    "sortOrder": 3
+  },
+  {
+    "id": "003",
+    "name": "基础海棠纹",
+    "type": "geometric",
+    "category": "原型",
+    "description": "由基础几何图形构成的严谨图案。",
+    "icon": "/assets/img/004.png",
+    "parentId": null,
+    "sortOrder": 4
+  },
+  {
+    "id": "004",
+    "name": "基础方胜纹",
+    "type": "geometric",
+    "category": "原型",
+    "description": "",
+    "icon": "/assets/img/006.png",
+    "parentId": null,
+    "sortOrder": 5
+  },
+  {
+    "id": "005",
+    "name": "基础圆形",
+    "type": "geometric",
+    "category": "原型",
+    "description": "",
+    "icon": "/assets/img/007.png",
+    "parentId": null,
+    "sortOrder": 6
+  },
+  {
+    "id": "005-1",
+    "name": "双圆环",
+    "type": "geometric",
+    "category": "结构",
+    "description": "",
+    "icon": "/assets/img/008.png",
+    "parentId": "005",
+    "sortOrder": 7
+  },
+  {
+    "id": "006",
+    "name": "基础花瓣纹",
+    "type": "flower",
+    "category": "原型",
+    "description": "以花瓣、枝叶与藤蔓为母题的柔和纹样。",
+    "icon": "/assets/img/005.png",
+    "parentId": null,
+    "sortOrder": 8
+  },
+  {
+    "id": "001-2",
+    "name": "haioutest",
+    "type": "bird",
+    "category": "原型",
+    "description": "",
+    "icon": "/uploads/pokedex-6F2w2Oo0CiG0lX2Y8agCa.png",
+    "parentId": "001",
+    "sortOrder": 2
+  }
+]
