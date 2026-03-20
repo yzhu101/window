@@ -535,6 +535,14 @@
 
     async function showDetail(id, name, desc, icon, code) {
       document.getElementById('detailModal').style.display = 'flex';
+      
+      // 添加点击空白处关闭的事件监听
+      document.getElementById('detailModal').onclick = function(e) {
+        if (e.target === this) {
+          closeDetail();
+        }
+      };
+
       document.getElementById('dmTitle').textContent = name;
       document.getElementById('dmId').textContent = 'No.' + code;
       document.getElementById('dmDesc').textContent = desc || '暂无描述';
