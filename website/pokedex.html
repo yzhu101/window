@@ -155,6 +155,8 @@
       scrollbar-width: none; 
       -ms-overflow-style: none;
       align-items: flex-start;
+      scroll-behavior: smooth; /* 增加平滑滚动行为 */
+      padding-right: 16px; /* 增加右侧内边距，确保最右侧元素能完全展开 */
     }
     .scroll-container::-webkit-scrollbar { display: none; }
 
@@ -186,19 +188,33 @@
       flex-shrink: 0;
       gap: 12px;
       position: relative;
+      width: 140px; /* 默认宽度与 tile-card 一致 */
+      transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1), margin-right 0.4s cubic-bezier(0.25, 1, 0.5, 1); /* 添加 margin-right 过渡 */
+    }
+    
+    .tile-wrapper.has-expanded-children {
+      width: 250px; /* 展开子节点时，wrapper 的宽度变宽，从而平滑地推开右侧元素 */
+      margin-right: 16px; /* 增加右侧间距，确保滑动更明显 */
     }
     
     .children-container {
       display: none;
+      flex-direction: column;
       gap: 12px;
       margin-top: 0;
       margin-left: 24px; /* 向右缩进一点体现层级 */
       padding-bottom: 0;
-      overflow-x: visible;
-      animation: slideDown 0.3s ease-out; /* 改回向下展开动画 */
       border-left: 2px dashed rgba(94, 54, 67, 0.2); /* 恢复左侧虚线 */
       padding-left: 16px; 
       position: relative;
+      opacity: 0;
+      width: 0; /* 使用 width 控制横向展开动画 */
+      max-height: 0;
+      overflow: hidden; /* 隐藏超出部分以实现滑动效果 */
+      transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1), max-height 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease-out, margin-top 0.4s;
+      transform-origin: top left;
+      /* 强制避免换行和挤压 */
+      white-space: nowrap;
     }
     
     .children-container::before {
@@ -208,7 +224,7 @@
     /* 优化子元素的卡片样式，使其看起来像一个列表项而不是独立的方块卡片 */
     .children-container .tile-card {
       min-width: 200px;
-      width: 100%;
+      width: 200px;
       height: auto; /* 允许高度自适应 */
       flex-direction: row;
       align-items: center;
@@ -218,10 +234,14 @@
       box-shadow: none;
       border: 1px solid rgba(94, 54, 67, 0.03);
       position: relative; /* 确保子元素的绝对定位基于此容器 */
+      transform: translateX(-20px); /* 初始位置偏左，实现横向滑入 */
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+      white-space: normal; /* 卡片内部恢复正常换行 */
     }
     .children-container .tile-card:hover {
       background: #fff;
-      transform: translateX(4px); /* 悬浮时向右一点点 */
+      transform: translateX(4px) !important; /* 悬浮时向右一点点 */
       box-shadow: 0 4px 12px rgba(94, 54, 67, 0.05);
     }
     
@@ -277,16 +297,23 @@
     
     .children-container::-webkit-scrollbar { display: none; }
     
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
+    .children-container.show {
+      opacity: 1;
+      width: 250px; /* 展开时的实际宽度（包含 padding） */
+      max-height: 2000px; /* 给一个足够大的高度来产生过渡效果 */
+      margin-top: 12px;
     }
     
-    .children-container.show {
-      display: flex;
-      flex-direction: column; /* 子元素也改为垂直排列 */
-      align-items: flex-start;
+    /* 使用交错动画让子元素从左侧依次滑入 */
+    .children-container.show .tile-card {
+      transform: translateX(0);
+      opacity: 1;
     }
+    .children-container.show .tile-card:nth-child(1) { transition-delay: 0.05s; }
+    .children-container.show .tile-card:nth-child(2) { transition-delay: 0.1s; }
+    .children-container.show .tile-card:nth-child(3) { transition-delay: 0.15s; }
+    .children-container.show .tile-card:nth-child(4) { transition-delay: 0.2s; }
+    .children-container.show .tile-card:nth-child(5) { transition-delay: 0.25s; }
     
     /* 移除之前的展开横线效果 */
     .children-container.show::before {
@@ -513,9 +540,59 @@
           e.stopPropagation();
           card.classList.toggle('expanded');
           const childrenContainer = document.getElementById(`children-${id}`);
+          const currentWrapper = card.closest('.tile-wrapper');
+          
           if (childrenContainer) {
-            childrenContainer.classList.toggle('show');
-            // 向下展开不需要专门往右滚动
+            // 先处理兄弟节点的收起逻辑，实现手风琴效果
+            const allWrappers = card.closest('.scroll-container').querySelectorAll('.tile-wrapper');
+            allWrappers.forEach(wrapper => {
+              if (wrapper !== currentWrapper) {
+                const otherCard = wrapper.querySelector('.tile-card.has-children');
+                const otherContainer = wrapper.querySelector('.children-container');
+                if (otherCard && otherCard.classList.contains('expanded')) {
+                  otherCard.classList.remove('expanded');
+                  wrapper.classList.remove('has-expanded-children');
+                  if (otherContainer) {
+                    otherContainer.classList.remove('show');
+                    // 等待动画结束后再隐藏
+                    setTimeout(() => {
+                      if (!otherContainer.classList.contains('show')) {
+                        otherContainer.style.display = 'none';
+                      }
+                    }, 400);
+                  }
+                }
+              }
+            });
+
+             if (childrenContainer.classList.contains('show')) {
+                // 如果已经是展开状态，则收起
+                childrenContainer.classList.remove('show');
+                if (currentWrapper) currentWrapper.classList.remove('has-expanded-children');
+                setTimeout(() => {
+                  if (!childrenContainer.classList.contains('show')) {
+                    childrenContainer.style.display = 'none';
+                  }
+                }, 400);
+              } else {
+               // 如果是收起状态，则展开
+               childrenContainer.style.display = 'flex';
+               if (currentWrapper) currentWrapper.classList.add('has-expanded-children');
+               
+               // 强制浏览器重绘以确保初始状态被应用
+               childrenContainer.offsetHeight; 
+               
+               // 展开后平滑滚动，让当前点击的卡片靠左显示
+               const scrollContainer = card.closest('.scroll-container');
+               if (scrollContainer && currentWrapper) {
+                 // 计算当前元素距离容器左侧的位置，加上一点点内边距
+                 const scrollLeft = currentWrapper.offsetLeft - scrollContainer.offsetLeft - 16;
+                 scrollContainer.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+               }
+ 
+               // 添加 show 类触发宽度、高度等过渡动画
+               childrenContainer.classList.add('show');
+             }
           }
           return;
         }
