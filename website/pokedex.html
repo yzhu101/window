@@ -618,10 +618,49 @@
       document.getElementById('dmWorks').innerHTML = '<div style="color:#999; padding:20px; text-align:center;">加载中...</div>';
 
       try {
-        const res = await fetch(`/api/pokedex/${code}/works`);
-        if (!res.ok) throw new Error('fail');
-        const json = await res.json();
-        const works = json.data || [];
+        let works = [];
+        
+        // 1. 优先尝试通过精确绑定的图鉴ID获取
+        try {
+          const res = await fetch(`/api/pokedex/${code}/works`);
+          if (res.ok) {
+            const json = await res.json();
+            works = json.data || [];
+          }
+        } catch (e) {
+          console.warn('Failed to fetch specific pokedex works, falling back to all works');
+        }
+        
+        // 2. 如果没有精确绑定的数据，尝试获取所有数据并通过名称进行模糊匹配（智能关联）
+        if (works.length === 0) {
+          try {
+            let allWorks = [];
+            const r = await fetch('/api/works');
+            if (r.ok) {
+              const result = await r.json();
+              allWorks = result.data || result || [];
+            } else {
+              const r2 = await fetch('./data/works.json');
+              const result2 = await r2.json();
+              allWorks = result2.data || result2 || [];
+            }
+            
+            // 提取图鉴名称的核心词，提高匹配率（去除"基础"、"纹"、"的"等修饰词）
+            const coreName = name.replace(/基础|纹|的|简易|拼接/g, '');
+            
+            works = allWorks.filter(w => {
+              if (w.pokedexId === code) return true; // 如果后期绑定了ID，则优先匹配
+              if (!w.title) return false;
+              // 精确名称包含
+              if (w.title.includes(name) || name.includes(w.title)) return true;
+              // 核心词包含（核心词至少1个字符才匹配，避免空字符串匹配所有）
+              if (coreName && coreName.length >= 1 && w.title.includes(coreName)) return true;
+              return false;
+            });
+          } catch (fallbackError) {
+            console.warn('Fallback match failed:', fallbackError);
+          }
+        }
         
         if (works.length === 0) {
           document.getElementById('dmWorks').innerHTML = '<div style="color:#999; padding:10px; text-align:center;">暂无发现记录</div>';
