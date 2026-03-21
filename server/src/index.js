@@ -31,6 +31,26 @@ const PORT = process.env.PORT || 3000
 // 本地内存存储（用于无MongoDB的本地开发）
 let localWorks = []
 let useDb = false
+const WORKS_FILE = path.resolve(process.cwd(), '../website/data/works.json')
+
+async function loadWorks() {
+  try {
+    const data = await fs.readFile(WORKS_FILE, 'utf-8')
+    localWorks = JSON.parse(data)
+    console.log(`Loaded ${localWorks.length} works from file`)
+  } catch (e) {
+    console.log('No local works file found, starting empty')
+    localWorks = []
+  }
+}
+
+async function saveWorks() {
+  try {
+    await fs.writeFile(WORKS_FILE, JSON.stringify(localWorks, null, 2))
+  } catch (e) {
+    console.error('Error saving works file:', e)
+  }
+}
 
 // 尝试连接MongoDB，如果失败则使用内存存储
 try {
@@ -42,9 +62,11 @@ try {
     useDb = true
   } else {
     console.log('未配置MongoDB，使用内存存储模式')
+    await loadWorks()
   }
 } catch (error) {
   console.log('MongoDB连接失败，使用内存存储模式:', error.message)
+  await loadWorks()
 }
 
 const workSchema = new mongoose.Schema({
@@ -60,7 +82,8 @@ const workSchema = new mongoose.Schema({
     lng: Number,
     address: String,
     city: String
-  }
+  },
+  pokedexId: String
 }, { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } })
 
 const Work = mongoose.model('Work', workSchema)
@@ -192,13 +215,18 @@ app.get('/api/works', async (req, res) => {
 })
 
 app.get('/api/works/admin/all', requireAdmin, async (req, res) => {
-  const items = await Work.find({}).sort({ createdAt: -1 })
-  res.json({ success: true, data: items })
+  if (useDb) {
+    const items = await Work.find({}).sort({ createdAt: -1 })
+    res.json({ success: true, data: items })
+  } else {
+    const items = [...localWorks].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    res.json({ success: true, data: items })
+  }
 })
 
 app.post('/api/works', upload.array('images'), async (req, res) => {
   try {
-    const { title = '', description = '', userId = '', rarity = '普通', lat, lng, address = '' } = req.body
+    const { title = '', description = '', userId = '', rarity = '普通', lat, lng, address = '', pokedexId = '' } = req.body
     const files = req.files || []
     const uploadedUrls = []
 
@@ -251,7 +279,8 @@ app.post('/api/works', upload.array('images'), async (req, res) => {
           lng: lng ? Number(lng) : undefined,
           address,
           city: computeCity(address)
-        }
+        },
+        pokedexId
       })
     } else {
       doc = {
@@ -269,10 +298,12 @@ app.post('/api/works', upload.array('images'), async (req, res) => {
           address,
           city: computeCity(address)
         },
+        pokedexId,
         createdAt: new Date(),
         updatedAt: new Date()
       }
       localWorks.push(doc)
+      await saveWorks()
       console.log('新增作品到内存存储:', doc.title)
     }
     res.json({ success: true, data: doc })
@@ -286,9 +317,17 @@ app.patch('/api/works/:id/status', requireAdmin, async (req, res) => {
     const { status } = req.body
     const allowed = ['pending', 'approved', 'rejected']
     if (!allowed.includes(status)) return res.status(400).json({ error: 'bad status' })
-    const item = await Work.findByIdAndUpdate(req.params.id, { status }, { new: true })
-    if (!item) return res.status(404).json({ error: 'not found' })
-    res.json({ success: true, data: item })
+    if (useDb) {
+      const item = await Work.findByIdAndUpdate(req.params.id, { status }, { new: true })
+      if (!item) return res.status(404).json({ error: 'not found' })
+      res.json({ success: true, data: item })
+    } else {
+      const idx = localWorks.findIndex(w => w._id === req.params.id)
+      if (idx === -1) return res.status(404).json({ error: 'not found' })
+      localWorks[idx].status = status
+      await saveWorks()
+      res.json({ success: true, data: localWorks[idx] })
+    }
   } catch (e) {
     res.status(400).json({ error: e.message || 'failed' })
   }
@@ -296,11 +335,12 @@ app.patch('/api/works/:id/status', requireAdmin, async (req, res) => {
 
 app.put('/api/works/:id', requireAdmin, async (req, res) => {
   try {
-    const { title, description, rarity, address, lat, lng, city } = req.body
+    const { title, description, rarity, address, lat, lng, city, pokedexId } = req.body
     const updateData = {}
     if (title !== undefined) updateData.title = title
     if (description !== undefined) updateData.description = description
     if (rarity !== undefined) updateData.rarity = rarity
+    if (pokedexId !== undefined) updateData.pokedexId = pokedexId
     if (address !== undefined) {
       updateData['location.address'] = address
       updateData['location.city'] = computeCity(address)
@@ -317,34 +357,86 @@ app.put('/api/works/:id', requireAdmin, async (req, res) => {
       if (!Number.isNaN(numLng)) updateData['location.lng'] = numLng
     }
     
-    const item = await Work.findByIdAndUpdate(req.params.id, { $set: updateData }, { new: true })
-    if (!item) return res.status(404).json({ error: 'not found' })
-    res.json({ success: true, data: item })
+    if (useDb) {
+      const item = await Work.findByIdAndUpdate(req.params.id, { $set: updateData }, { new: true })
+      if (!item) return res.status(404).json({ error: 'not found' })
+      res.json({ success: true, data: item })
+    } else {
+      const idx = localWorks.findIndex(w => w._id === req.params.id)
+      if (idx === -1) return res.status(404).json({ error: 'not found' })
+      
+      const work = localWorks[idx]
+      // manually apply updates for flat fields
+      if (updateData.title) work.title = updateData.title
+      if (updateData.description) work.description = updateData.description
+      if (updateData.rarity) work.rarity = updateData.rarity
+      if (updateData.pokedexId !== undefined) work.pokedexId = updateData.pokedexId
+      
+      // manually apply nested location updates
+      if (updateData['location.address']) work.location.address = updateData['location.address']
+      if (updateData['location.city']) work.location.city = updateData['location.city']
+      if (updateData['location.lat']) work.location.lat = updateData['location.lat']
+      if (updateData['location.lng']) work.location.lng = updateData['location.lng']
+      
+      work.updatedAt = new Date()
+      await saveWorks()
+      res.json({ success: true, data: work })
+    }
   } catch (e) {
     res.status(400).json({ error: e.message || 'failed' })
   }
 })
 
 app.delete('/api/works/:id', requireAdmin, async (req, res) => {
-  const item = await Work.findByIdAndDelete(req.params.id)
-  if (!item) return res.status(404).json({ error: 'not found' })
-  res.json({ success: true })
+  if (useDb) {
+    const item = await Work.findByIdAndDelete(req.params.id)
+    if (!item) return res.status(404).json({ error: 'not found' })
+    res.json({ success: true })
+  } else {
+    const idx = localWorks.findIndex(w => w._id === req.params.id)
+    if (idx === -1) return res.status(404).json({ error: 'not found' })
+    localWorks.splice(idx, 1)
+    await saveWorks()
+    res.json({ success: true })
+  }
 })
 
 app.post('/api/tools/backfill-city', requireAdmin, async (req, res) => {
   try {
-    const items = await Work.find({ $or: [ { 'location.city': { $exists: false } }, { 'location.city': '' }, { 'location.city': null } ] })
     let updated = 0
-    for (const item of items) {
-      const addr = item.location?.address || ''
-      const city = computeCity(addr)
-      if (city) {
-        await Work.updateOne({ _id: item._id }, { $set: { 'location.city': city } })
-        updated++
+    let scanned = 0
+    let cityCount = 0
+    
+    if (useDb) {
+      const items = await Work.find({ $or: [ { 'location.city': { $exists: false } }, { 'location.city': '' }, { 'location.city': null } ] })
+      scanned = items.length
+      for (const item of items) {
+        const addr = item.location?.address || ''
+        const city = computeCity(addr)
+        if (city) {
+          await Work.updateOne({ _id: item._id }, { $set: { 'location.city': city } })
+          updated++
+        }
       }
+      const distinctCities = await Work.distinct('location.city', { 'location.city': { $exists: true, $ne: '' } })
+      cityCount = distinctCities.length
+    } else {
+      scanned = localWorks.length
+      const cities = new Set()
+      for (const w of localWorks) {
+        if (!w.location.city) {
+          const c = computeCity(w.location.address)
+          if (c) {
+            w.location.city = c
+            updated++
+          }
+        }
+        if (w.location.city) cities.add(w.location.city)
+      }
+      if (updated > 0) await saveWorks()
+      cityCount = cities.size
     }
-    const distinctCities = await Work.distinct('location.city', { 'location.city': { $exists: true, $ne: '' } })
-    res.json({ success: true, scanned: items.length, updated, cityCount: distinctCities.length })
+    res.json({ success: true, scanned, updated, cityCount })
   } catch (e) {
     res.status(500).json({ error: e.message || 'backfill failed' })
   }
@@ -354,6 +446,58 @@ app.post('/api/tools/backfill-city', requireAdmin, async (req, res) => {
 app.get('/api/pokedex/config', async (req, res) => {
   res.json({ success: true, data: localPokedexConfig })
 })
+
+app.get('/api/pokedex/:id/works', async (req, res) => {
+    try {
+      const { id } = req.params
+      const pokedexItem = localPokedex.find(p => p.id === id) || { name: '' }
+      const name = pokedexItem.name
+      const coreName = name ? name.replace(/基础|纹|的|简易|拼接/g, '') : ''
+
+      if (useDb) {
+        const items = await Work.find({
+          $or: [
+            { pokedexId: id },
+            { pokedexId: { $regex: new RegExp(`^${id}-`) } }
+          ],
+          status: 'approved'
+        }).sort({ createdAt: -1 })
+
+        if (items.length === 0 && name) {
+          const smartItems = await Work.find({
+            pokedexId: { $in: [null, '', undefined] },
+            status: 'approved',
+            title: { $regex: coreName.length >= 1 ? coreName : name }
+          }).sort({ createdAt: -1 })
+          res.json({ success: true, data: smartItems })
+        } else {
+          res.json({ success: true, data: items })
+        }
+      } else {
+        let items = localWorks.filter(w => {
+          if (w.status !== 'approved') return false
+          if (w.pokedexId === id) return true
+          if (w.pokedexId && w.pokedexId.startsWith(`${id}-`)) return true
+          return false
+        }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+
+        if (items.length === 0 && name) {
+          items = localWorks.filter(w => {
+            if (w.status !== 'approved') return false
+            if (w.pokedexId) return false // 已经绑定其他图鉴的不匹配
+            if (w.title && w.title.includes(name)) return true
+            if (coreName && coreName.length >= 1 && w.title && w.title.includes(coreName)) return true
+            return false
+          }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        }
+
+        res.json({ success: true, data: items })
+      }
+    } catch (e) {
+      console.error('Fetch pokedex works failed:', e)
+      res.status(500).json({ error: 'fetch failed' })
+    }
+  })
 
 app.put('/api/pokedex/config', requireAdmin, async (req, res) => {
   try {
@@ -430,6 +574,9 @@ app.post('/api/pokedex', requireAdmin, upload.single('icon'), async (req, res) =
 
     if (useDb) {
       const doc = await Pokedex.create(newEntry)
+      // Sync to local file as backup
+      localPokedex.push(newEntry)
+      await savePokedex()
       res.json({ success: true, data: doc })
     } else {
       localPokedex.push(newEntry)
@@ -487,6 +634,17 @@ app.put('/api/pokedex/:id', requireAdmin, upload.single('icon'), async (req, res
     if (useDb) {
       const item = await Pokedex.findOneAndUpdate({ id: id }, updateData, { new: true })
       if (!item) return res.status(404).json({ error: 'not found' })
+      
+      // Sync to local file as backup
+      const idx = localPokedex.findIndex(p => p.id === id)
+      if (idx !== -1) {
+        localPokedex[idx] = { ...localPokedex[idx], ...updateData }
+        if (iconUrl) localPokedex[idx].icon = iconUrl
+      } else {
+        localPokedex.push(item.toObject())
+      }
+      await savePokedex()
+      
       res.json({ success: true, data: item })
     } else {
       const idx = localPokedex.findIndex(p => p.id === id)
@@ -506,6 +664,13 @@ app.delete('/api/pokedex/:id', requireAdmin, async (req, res) => {
     const { id } = req.params
     if (useDb) {
       await Pokedex.findOneAndDelete({ id: id })
+      
+      // Sync to local file as backup
+      const idx = localPokedex.findIndex(p => p.id === id)
+      if (idx !== -1) {
+        localPokedex.splice(idx, 1)
+        await savePokedex()
+      }
     } else {
       const idx = localPokedex.findIndex(p => p.id === id)
       if (idx !== -1) {
