@@ -543,28 +543,8 @@
           const currentWrapper = card.closest('.tile-wrapper');
           
           if (childrenContainer) {
-            // 先处理兄弟节点的收起逻辑，实现手风琴效果
-            const allWrappers = card.closest('.scroll-container').querySelectorAll('.tile-wrapper');
-            allWrappers.forEach(wrapper => {
-              if (wrapper !== currentWrapper) {
-                const otherCard = wrapper.querySelector('.tile-card.has-children');
-                const otherContainer = wrapper.querySelector('.children-container');
-                if (otherCard && otherCard.classList.contains('expanded')) {
-                  otherCard.classList.remove('expanded');
-                  wrapper.classList.remove('has-expanded-children');
-                  if (otherContainer) {
-                    otherContainer.classList.remove('show');
-                    // 等待动画结束后再隐藏
-                    setTimeout(() => {
-                      if (!otherContainer.classList.contains('show')) {
-                        otherContainer.style.display = 'none';
-                      }
-                    }, 400);
-                  }
-                }
-              }
-            });
-
+            // 移除手风琴效果逻辑，允许多个子元素同时展开
+            
              if (childrenContainer.classList.contains('show')) {
                 // 如果已经是展开状态，则收起
                 childrenContainer.classList.remove('show');
@@ -583,11 +563,22 @@
                childrenContainer.offsetHeight; 
                
                // 展开后平滑滚动，让当前点击的卡片靠左显示
+               // （因为允许多个展开，如果总是强制滚动到最左边体验可能不好，我们改为只确保元素完全在可视区域内，而不是硬滚动到最左边）
                const scrollContainer = card.closest('.scroll-container');
                if (scrollContainer && currentWrapper) {
-                 // 计算当前元素距离容器左侧的位置，加上一点点内边距
-                 const scrollLeft = currentWrapper.offsetLeft - scrollContainer.offsetLeft - 16;
-                 scrollContainer.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+                 const containerRect = scrollContainer.getBoundingClientRect();
+                 const wrapperRect = currentWrapper.getBoundingClientRect();
+                 
+                 // 如果当前元素展开后会超出右侧屏幕，则向右滚动
+                 const expandedWidth = 260; // 展开后的宽度
+                 if (wrapperRect.left + expandedWidth > containerRect.right) {
+                    const scrollLeft = scrollContainer.scrollLeft + (wrapperRect.left + expandedWidth - containerRect.right) + 32;
+                    scrollContainer.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+                 } else if (wrapperRect.left < containerRect.left) {
+                    // 如果元素在屏幕左侧外面，则向左滚动
+                    const scrollLeft = currentWrapper.offsetLeft - scrollContainer.offsetLeft - 16;
+                    scrollContainer.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+                 }
                }
  
                // 添加 show 类触发宽度、高度等过渡动画
@@ -791,6 +782,8 @@
                 `;
              });
           }
+          
+          // 这里可以添加测试数据
           
           groupHtml += `</div></div>`;
           html += groupHtml;
