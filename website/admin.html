@@ -12,7 +12,7 @@
       min-height: 100vh;
     }
     .header {
-      background: #333;
+      background: #454545;
       color: white;
       padding: 16px 20px;
       display: flex;
@@ -65,7 +65,7 @@
     .work-info h3 {
       font-size: 16px;
       margin-bottom: 8px;
-      color: #333;
+      color: #454545;
     }
     .work-info p {
       color: #666;
@@ -169,7 +169,7 @@
       max-width: 500px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.2);
     }
-    .modal h2 { margin-top: 0; margin-bottom: 20px; color: #333; }
+    .modal h2 { margin-top: 0; margin-bottom: 20px; color: #454545; }
     .form-row { margin-bottom: 16px; }
     .form-row label { display: block; margin-bottom: 8px; color: #666; font-weight: 500; }
     .form-row input, .form-row select, .form-row textarea {
@@ -185,7 +185,7 @@
       gap: 10px;
       margin-top: 24px;
     }
-    .btn-cancel { background: #eee; color: #333; }
+    .btn-cancel { background: #eee; color: #454545; }
     .btn-save { background: #d4a574; color: white; }
   </style>
 </head>
@@ -249,6 +249,12 @@
           <input type="text" id="editLng" placeholder="经度 Lng，例如 114.057865">
         </div>
       </div>
+      <div class="form-row">
+        <label>关联图鉴类型 (Pokedex ID)</label>
+        <select id="editPokedexId">
+          <option value="">-- 无关联 --</option>
+        </select>
+      </div>
       <div class="modal-actions">
         <button class="btn btn-cancel" onclick="closeEditModal()">取消</button>
         <button class="btn btn-save" onclick="saveEdit()">保存</button>
@@ -283,6 +289,23 @@
     let currentTab = 'pending';
     let currentView = 'card';
     let allWorks = [];
+    let pokedexList = []; // store pokedex data
+
+    async function loadPokedexList() {
+      try {
+        const res = await fetch(`${API_BASE}/api/pokedex`);
+        if (res.ok) {
+          const json = await res.json();
+          pokedexList = json.data || [];
+          // Update select options
+          const select = document.getElementById('editPokedexId');
+          if (select) {
+            select.innerHTML = '<option value="">-- 无关联 --</option>' + 
+              pokedexList.map(p => `<option value="${p.id}">${p.name} (${p.id})</option>`).join('');
+          }
+        }
+      } catch (e) { console.warn('Pokedex load failed', e); }
+    }
     
     function switchView(view) {
       currentView = view;
@@ -496,6 +519,7 @@
       document.getElementById('editCity').value = work.location?.city || '';
       document.getElementById('editLat').value = (work.location?.lat ?? '');
       document.getElementById('editLng').value = (work.location?.lng ?? '');
+      document.getElementById('editPokedexId').value = work.pokedexId || '';
       
       document.getElementById('editModal').style.display = 'flex';
     }
@@ -515,7 +539,8 @@
         address: document.getElementById('editAddress').value,
         city: document.getElementById('editCity').value,
         lat: document.getElementById('editLat').value,
-        lng: document.getElementById('editLng').value
+        lng: document.getElementById('editLng').value,
+        pokedexId: document.getElementById('editPokedexId').value
       };
       
       try {
@@ -581,6 +606,7 @@
     }
     
     loadWorks();
+    loadPokedexList(); // Load pokedex options
     setInterval(loadWorks, 30000);
   </script>
 </body>
