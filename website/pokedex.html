@@ -515,7 +515,7 @@
       </div>
       <div class="dm-body">
         <div class="dm-desc" id="dmDesc"></div>
-        <h3 style="margin-bottom: 12px; font-size: 16px; color: #454545;">🏛️ 发现地点</h3>
+        <h3 id="dmWorksTitle" style="margin-bottom: 12px; font-size: 16px; color: #454545;">🏛️ 发现地点</h3>
         <div id="dmWorks" class="dm-works-list"></div>
       </div>
     </div>
@@ -616,6 +616,7 @@
       document.getElementById('dmDesc').textContent = desc || '暂无描述';
       document.getElementById('dmIcon').innerHTML = icon ? `<img src="${icon}">` : '';
       document.getElementById('dmWorks').innerHTML = '<div style="color:#999; padding:20px; text-align:center;">加载中...</div>';
+      document.getElementById('dmWorksTitle').textContent = '🏛️ 发现地点';
 
       try {
         const res = await fetch(`/api/pokedex/${code}/works`);
@@ -626,6 +627,7 @@
         if (works.length === 0) {
           document.getElementById('dmWorks').innerHTML = '<div style="color:#999; padding:10px; text-align:center;">暂无发现记录</div>';
         } else {
+          document.getElementById('dmWorksTitle').textContent = `🏛️ 发现地点 (${works.length})`;
           document.getElementById('dmWorks').innerHTML = works.map(w => `
             <a href="/?lat=${w.location?.lat}&lng=${w.location?.lng}&zoom=18" class="dm-work-item" target="_blank">
               <img src="${w.images?.[0] || ''}" class="dm-work-thumb" onerror="this.style.display='none'">
