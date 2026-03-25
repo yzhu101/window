@@ -850,6 +850,16 @@
         .replace(/\r/g, '');
     }
 
+    function escapeHtmlJs(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '&quot;')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '');
+    }
+
     async function loadPokedex() {
       const container = document.getElementById('pokedex-container');
       try {
@@ -934,7 +944,7 @@
             
             groupHtml += `
               <div class="tile-wrapper">
-                <div class="tile-card ${hasChildren ? 'has-children' : ''} ${isRootLocked ? 'locked' : ''}" data-id="${root.id}" onclick="handleCardClick(event, '${escapeHtmlJs(root.id)}', '${escapeHtmlJs(root.name)}', '${escapeHtmlJs(root.description)}', '${escapeHtmlJs(root.icon)}')">
+                <div class="tile-card ${hasChildren ? 'has-children' : ''} ${isRootLocked ? 'locked' : ''}" data-id="${root.id}" onclick="handleCardClick(event, '${escapeHtmlJs(root.id)}', '${escapeHtmlJs(root.name)}', '${escapeHtmlJs(root.description || '')}', '${escapeHtmlJs(root.icon || '')}')">
                   <div class="tile-bg" style="background-image: url('${root.icon || ''}')"></div>
                   <div class="tile-icon">
                     <img src="${root.icon || ''}" alt="${root.name}" onerror="this.style.display='none'">
@@ -950,7 +960,7 @@
               children.forEach(child => {
                 const isChildLocked = !userState.collected.includes(child.id);
                 groupHtml += `
-                  <div class="tile-card ${isChildLocked ? 'locked' : ''}" onclick="showDetail('${escapeHtmlJs(child.id)}', '${escapeHtmlJs(child.name)}', '${escapeHtmlJs(child.description)}', '${escapeHtmlJs(child.icon)}', '${escapeHtmlJs(child.id)}')">
+                  <div class="tile-card ${isChildLocked ? 'locked' : ''}" onclick="showDetail('${escapeHtmlJs(child.id)}', '${escapeHtmlJs(child.name)}', '${escapeHtmlJs(child.description || '')}', '${escapeHtmlJs(child.icon || '')}', '${escapeHtmlJs(child.id)}')">
                     <div class="left-group">
                       <div class="tile-icon">
                         <img src="${child.icon || ''}" alt="${child.name}" onerror="this.style.display='none'">
@@ -977,7 +987,7 @@
                 const isItemLocked = !userState.collected.includes(item.id);
                 groupHtml += `
                   <div class="tile-wrapper">
-                    <div class="tile-card ${isItemLocked ? 'locked' : ''}" onclick="showDetail('${escapeHtmlJs(item.id)}', '${escapeHtmlJs(item.name)}', '${escapeHtmlJs(item.description)}', '${escapeHtmlJs(item.icon)}', '${escapeHtmlJs(item.id)}')">
+                    <div class="tile-card ${isItemLocked ? 'locked' : ''}" onclick="showDetail('${escapeHtmlJs(item.id)}', '${escapeHtmlJs(item.name)}', '${escapeHtmlJs(item.description || '')}', '${escapeHtmlJs(item.icon || '')}', '${escapeHtmlJs(item.id)}')">
                       <div class="tile-bg" style="background-image: url('${item.icon || ''}')"></div>
                       <div class="tile-icon">
                         <img src="${item.icon || ''}" alt="${item.name}" onerror="this.style.display='none'">
