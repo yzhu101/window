@@ -403,9 +403,94 @@
     .tile-card.locked {
       background: #eae6db;
       border: 1px dashed #ccc;
+      filter: grayscale(1);
     }
     .tile-card.locked .tile-icon { background: #dfdcd1; }
     .tile-card.locked .tile-name { color: #888; }
+    
+    .children-container .tile-card.locked {
+      background: rgba(234, 230, 219, 0.5);
+      border: 1px dashed #ccc;
+      filter: grayscale(1);
+    }
+
+    /* Social Action Buttons */
+    .dm-social-actions {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 16px;
+    }
+    .social-action-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid #eee;
+      background: #f9f9f9;
+      color: #666;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .social-action-btn:hover {
+      background: #f0f0f0;
+    }
+    .social-action-btn.active.light-up {
+      background: #5e3643;
+      color: white;
+      border-color: #5e3643;
+    }
+    .social-action-btn.active.like {
+      background: #ffeff3;
+      color: #e83e60;
+      border-color: #ffcdd8;
+    }
+    .social-action-btn.active.wishlist {
+      background: #f0f7ff;
+      color: #0066cc;
+      border-color: #cce4ff;
+    }
+
+    /* Milestone Card Modal */
+    .milestone-card-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.8); z-index: 3000;
+      display: none; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .milestone-card {
+      background: #f5f1e6;
+      width: 100%; max-width: 340px;
+      border-radius: 20px;
+      padding: 30px;
+      position: relative;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      background-image: linear-gradient(135deg, #fdfbf7 0%, #f5f1e6 100%);
+    }
+    .milestone-card::before {
+      content: ''; position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px;
+      border: 1px solid rgba(94, 54, 67, 0.1); border-radius: 14px; pointer-events: none;
+    }
+    .mc-title { font-size: 20px; color: #5e3643; font-weight: 800; margin-bottom: 8px; letter-spacing: 2px; }
+    .mc-subtitle { font-size: 13px; color: #888; margin-bottom: 24px; }
+    .mc-number { font-size: 64px; font-weight: 900; color: #5e3643; line-height: 1; text-shadow: 2px 2px 0px rgba(94,54,67,0.1); }
+    .mc-desc { font-size: 14px; color: #666; margin-top: 16px; margin-bottom: 30px; }
+    .mc-footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px dashed rgba(94,54,67,0.2); padding-top: 16px; text-align: left;}
+    .mc-footer img { width: 50px; height: 50px; border-radius: 50%; }
+    .mc-footer-text { font-size: 11px; color: #999; }
+    
+    .share-btn-wrap { margin-top: 20px; text-align: center; }
+    .share-btn {
+      background: #5e3643; color: white; border: none; padding: 12px 30px; border-radius: 100px;
+      font-size: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(94,54,67,0.3);
+    }
 
     
     /* --- 弹窗样式保留 --- */
@@ -485,9 +570,9 @@
         <div class="stat-value" id="pk-workCount">...</div>
         <div class="stat-label">总记录数</div>
       </div>
-      <div class="stat-item">
-        <div class="stat-value" id="pk-cityCount">...</div>
-        <div class="stat-label">覆盖城市</div>
+      <div class="stat-item" style="cursor: pointer;" onclick="showMilestoneCard()">
+        <div class="stat-value" id="pk-collectedCount" style="color: #e83e60;">0</div>
+        <div class="stat-label">我已点亮 (点击生成卡片)</div>
       </div>
     </div>
 
@@ -514,6 +599,11 @@
         </div>
       </div>
       <div class="dm-body">
+        <div class="dm-social-actions">
+          <button id="btn-collect" class="social-action-btn light-up" onclick="toggleAction('collected', currentDetailId)">✨ 点亮图鉴</button>
+          <button id="btn-like" class="social-action-btn like" onclick="toggleAction('liked', currentDetailId)">🤍 惊艳</button>
+          <button id="btn-wish" class="social-action-btn wishlist" onclick="toggleAction('wishlist', currentDetailId)">📌 想去</button>
+        </div>
         <div class="dm-desc" id="dmDesc"></div>
         <h3 id="dmWorksTitle" style="margin-bottom: 12px; font-size: 16px; color: #454545;">🏛️ 发现地点</h3>
         <div id="dmWorks" class="dm-works-list"></div>
@@ -521,7 +611,102 @@
     </div>
   </div>
 
+  <!-- Milestone Card Overlay -->
+  <div id="milestoneModal" class="milestone-card-overlay" onclick="closeMilestoneCard(event)">
+    <div>
+      <div class="milestone-card" id="milestoneCardContent" onclick="event.stopPropagation()">
+        <div class="mc-title">花窗巡礼</div>
+        <div class="mc-subtitle">—— 城市边缘的审美足迹 ——</div>
+        <div class="mc-number" id="mcNumber">0</div>
+        <div class="mc-desc">我已在「水泥花格地图」<br>点亮了上述数量的绝美花窗</div>
+        <div class="mc-footer">
+          <div class="mc-footer-text">
+            扫码加入寻窗之旅<br>
+            记录专属你的城市记忆
+          </div>
+          <img src="./assets/img/window-flower-icon-small.png" style="background:#5e3643; padding:8px;" alt="QR Code">
+        </div>
+      </div>
+      <div class="share-btn-wrap">
+        <button class="share-btn" onclick="saveCard()">长按保存 / 点击分享</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // User State Management
+    let userState = {
+      collected: [], // Array of pokedex IDs
+      liked: [],
+      wishlist: []
+    };
+    try {
+      const saved = localStorage.getItem('hc_user_state');
+      if (saved) userState = JSON.parse(saved);
+    } catch(e) {}
+
+    function saveUserState() {
+      localStorage.setItem('hc_user_state', JSON.stringify(userState));
+      updateGlobalStats();
+      loadPokedex(); // Re-render to show locked/unlocked
+    }
+
+    function toggleAction(action, id) {
+      const arr = userState[action];
+      const index = arr.indexOf(id);
+      if (index > -1) {
+        arr.splice(index, 1);
+      } else {
+        arr.push(id);
+      }
+      saveUserState();
+      
+      // Update buttons in modal
+      updateModalButtons(id);
+    }
+
+    function updateModalButtons(id) {
+      const isCollected = userState.collected.includes(id);
+      const isLiked = userState.liked.includes(id);
+      const isWish = userState.wishlist.includes(id);
+      
+      const btnCollect = document.getElementById('btn-collect');
+      const btnLike = document.getElementById('btn-like');
+      const btnWish = document.getElementById('btn-wish');
+      
+      if(btnCollect) {
+        btnCollect.className = `social-action-btn light-up ${isCollected ? 'active' : ''}`;
+        btnCollect.innerHTML = isCollected ? '✨ 已点亮' : '✨ 点亮图鉴';
+      }
+      if(btnLike) {
+        btnLike.className = `social-action-btn like ${isLiked ? 'active' : ''}`;
+        btnLike.innerHTML = isLiked ? '❤️ 已惊艳' : '🤍 惊艳';
+      }
+      if(btnWish) {
+        btnWish.className = `social-action-btn wishlist ${isWish ? 'active' : ''}`;
+        btnWish.innerHTML = isWish ? '📌 已加入想去' : '📌 想去';
+      }
+    }
+
+    function updateGlobalStats() {
+      const el = document.getElementById('pk-collectedCount');
+      if (el) el.textContent = userState.collected.length;
+    }
+
+    function showMilestoneCard() {
+      document.getElementById('mcNumber').textContent = userState.collected.length;
+      document.getElementById('milestoneModal').style.display = 'flex';
+    }
+    function closeMilestoneCard(e) {
+      document.getElementById('milestoneModal').style.display = 'none';
+    }
+    function saveCard() {
+      alert("请截图保存或分享给好友！\n（后续可接入 html2canvas 生成图片）");
+    }
+
+    // Call this initially
+    updateGlobalStats();
+
     window.handleCardClick = function(e, id, name, desc, icon) {
       const card = e.currentTarget;
       // 如果点击的是带有子节点的卡片的展开按钮区域
@@ -601,8 +786,16 @@
     setInterval(updateClock, 1000);
     updateClock();
 
+    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    const API_BASE = isLocal ? 'http://localhost:3000' : '';
+
+    let currentDetailId = null;
+
     async function showDetail(id, name, desc, icon, code) {
+      currentDetailId = id;
       document.getElementById('detailModal').style.display = 'flex';
+      
+      updateModalButtons(id);
       
       // 添加点击空白处关闭的事件监听
       document.getElementById('detailModal').onclick = function(e) {
@@ -619,7 +812,7 @@
       document.getElementById('dmWorksTitle').textContent = '🏛️ 发现地点';
 
       try {
-        const res = await fetch(`/api/pokedex/${code}/works`);
+        const res = await fetch(`${API_BASE}/api/pokedex/${code}/works`);
         if (!res.ok) throw new Error('fail');
         const json = await res.json();
         const works = json.data || [];
@@ -647,13 +840,23 @@
       document.getElementById('detailModal').style.display = 'none';
     }
 
+    function escapeHtmlJs(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '&quot;')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '');
+    }
+
     async function loadPokedex() {
       const container = document.getElementById('pokedex-container');
       try {
         // 1. Load config first
         let config = { types: [], categories: [] };
         try {
-          const cfgRes = await fetch('/api/pokedex/config');
+          const cfgRes = await fetch(`${API_BASE}/api/pokedex/config`);
           if (cfgRes.ok) {
             const json = await cfgRes.json();
             config = json.data;
@@ -661,7 +864,7 @@
         } catch (e) { console.warn('Config load failed', e); }
         
         // 2. Load data
-        const res = await fetch('/api/pokedex');
+        const res = await fetch(`${API_BASE}/api/pokedex`);
         if (!res.ok) throw new Error('Failed to load');
         const json = await res.json();
         const data = json.data || [];
@@ -727,10 +930,11 @@
           roots.forEach(root => {
             const children = childrenMap[root.id] || [];
             const hasChildren = children.length > 0;
+            const isRootLocked = !userState.collected.includes(root.id);
             
             groupHtml += `
               <div class="tile-wrapper">
-                <div class="tile-card ${hasChildren ? 'has-children' : ''}" data-id="${root.id}" onclick="handleCardClick(event, '${root.id}', '${root.name}', '${root.description || ''}', '${root.icon || ''}')">
+                <div class="tile-card ${hasChildren ? 'has-children' : ''} ${isRootLocked ? 'locked' : ''}" data-id="${root.id}" onclick="handleCardClick(event, '${escapeHtmlJs(root.id)}', '${escapeHtmlJs(root.name)}', '${escapeHtmlJs(root.description)}', '${escapeHtmlJs(root.icon)}')">
                   <div class="tile-bg" style="background-image: url('${root.icon || ''}')"></div>
                   <div class="tile-icon">
                     <img src="${root.icon || ''}" alt="${root.name}" onerror="this.style.display='none'">
@@ -744,8 +948,9 @@
             if (hasChildren) {
               groupHtml += `<div class="children-container" id="children-${root.id}">`;
               children.forEach(child => {
+                const isChildLocked = !userState.collected.includes(child.id);
                 groupHtml += `
-                  <div class="tile-card" onclick="showDetail('${child.id}', '${child.name}', '${child.description || ''}', '${child.icon || ''}', '${child.id}')">
+                  <div class="tile-card ${isChildLocked ? 'locked' : ''}" onclick="showDetail('${escapeHtmlJs(child.id)}', '${escapeHtmlJs(child.name)}', '${escapeHtmlJs(child.description)}', '${escapeHtmlJs(child.icon)}', '${escapeHtmlJs(child.id)}')">
                     <div class="left-group">
                       <div class="tile-icon">
                         <img src="${child.icon || ''}" alt="${child.name}" onerror="this.style.display='none'">
@@ -769,9 +974,10 @@
           // 如果没有 roots 但是有 items，作为特殊情况全部平铺显示
           if (roots.length === 0 && group.items.length > 0) {
              group.items.forEach(item => {
+                const isItemLocked = !userState.collected.includes(item.id);
                 groupHtml += `
                   <div class="tile-wrapper">
-                    <div class="tile-card" onclick="showDetail('${item.id}', '${item.name}', '${item.description || ''}', '${item.icon || ''}', '${item.id}')">
+                    <div class="tile-card ${isItemLocked ? 'locked' : ''}" onclick="showDetail('${escapeHtmlJs(item.id)}', '${escapeHtmlJs(item.name)}', '${escapeHtmlJs(item.description)}', '${escapeHtmlJs(item.icon)}', '${escapeHtmlJs(item.id)}')">
                       <div class="tile-bg" style="background-image: url('${item.icon || ''}')"></div>
                       <div class="tile-icon">
                         <img src="${item.icon || ''}" alt="${item.name}" onerror="this.style.display='none'">
@@ -803,7 +1009,7 @@
     async function loadCounts() {
       let works = [];
       try {
-        const r = await fetch('/api/works');
+        const r = await fetch(`${API_BASE}/api/works`);
         if (r.ok) {
           const result = await r.json();
           works = result.data || result || [];
