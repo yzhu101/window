@@ -188,13 +188,6 @@
           </div>
           <input type="hidden" id="rarity" value="普通">
         </div>
-        
-        <div class="form-group">
-          <label>关联图鉴（可选）</label>
-          <select id="pokedexId" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; color: #454545; background-color: white; margin-bottom: 15px;">
-            <option value="">-- 未知或不关联 --</option>
-          </select>
-        </div>
       
       <div class="form-group">
         <label class="required">位置</label>
@@ -389,25 +382,6 @@
       });
     });
 
-    loadPokedexOptions();
-    
-    async function loadPokedexOptions() {
-      try {
-        const res = await fetch(`${API_BASE}/api/pokedex`);
-        if (res.ok) {
-          const json = await res.json();
-          const list = json.data || [];
-          const select = document.getElementById('pokedexId');
-          if (select) {
-            const options = list.map(p => `<option value="${p.id}">${p.name} (No.${p.id})</option>`).join('');
-            select.innerHTML += options;
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to load pokedex options', e);
-      }
-    }
-
     function previewImage(input) {
       const preview = document.getElementById('preview');
       if (input.files && input.files[0]) {
@@ -492,10 +466,6 @@
         formData.append('description', document.getElementById('description').value);
         formData.append('userId', document.getElementById('userId').value);
         formData.append('rarity', document.getElementById('rarity').value);
-        const pokedexSelect = document.getElementById('pokedexId');
-        if (pokedexSelect && pokedexSelect.value) {
-          formData.append('pokedexId', pokedexSelect.value);
-        }
         formData.append('lat', currentLat);
         formData.append('lng', currentLng);
         formData.append('address', document.getElementById('address').value || '');
