@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图鉴可视化优化 Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <!-- Map Data (GeoJSON format wrapped in JS for ECharts 5) -->
+    <script src="https://fastly.jsdelivr.net/gh/apache/echarts-website@asf-site/examples/data/map/js/china.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            bg: '#f5f1e6',
+                            text: '#454545',
+                            primary: '#5e3643',
+                            secondary: '#7c4d5c',
+                            card: '#ffffff'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #f5f1e6; color: #454545; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .masonry-grid { column-count: 2; column-gap: 1rem; }
+        @media (min-width: 768px) { .masonry-grid { column-count: 3; } }
+        @media (min-width: 1024px) { .masonry-grid { column-count: 4; } }
+        .masonry-item { break-inside: avoid; margin-bottom: 1rem; }
+        
+        .tab-btn { transition: all 0.3s ease; }
+        .tab-btn.active { background-color: #5e3643; color: white; border-color: #5e3643; }
+        .tab-btn:not(.active) { background-color: transparent; color: #5e3643; border-color: #5e3643; }
+        .tab-btn:not(.active):hover { background-color: rgba(94, 54, 67, 0.1); }
+        
+        .hover-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .hover-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(94, 54, 67, 0.15); }
+    </style>
+</head>
+<body class="min-h-screen" x-data="{ activeTab: 'gallery' }">
+    
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-50 bg-brand-bg/90 backdrop-blur border-b border-brand-primary/10 px-6 py-4 flex justify-between items-center">
+        <div class="text-brand-primary font-bold text-lg flex items-center gap-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+            花格图鉴 Pokedex <span class="text-sm font-normal text-brand-text/60 ml-2">可视化优化 Demo</span>
+        </div>
+        <a href="pokedex.html" class="text-sm text-brand-text hover:text-brand-primary">返回原版地图</a>
+    </nav>
+
+    <!-- Header Stats -->
+    <header class="max-w-6xl mx-auto px-6 py-8">
+        <h1 class="text-4xl font-extrabold text-brand-text tracking-tight mb-6">水泥花格档案库</h1>
+        <div class="flex flex-wrap gap-4 mb-8">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-brand-primary/5 flex-1 min-w-[200px] flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary text-xl font-bold">54</div>
+                <div><div class="text-sm text-brand-text/60">总收录款式</div><div class="font-bold text-xl text-brand-text">总记录数</div></div>
+            </div>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-brand-primary/5 flex-1 min-w-[200px] flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-brand-secondary/10 flex items-center justify-center text-brand-secondary text-xl font-bold">12</div>
+                <div><div class="text-sm text-brand-text/60">几何/植物/动物</div><div class="font-bold text-xl text-brand-text">基础原型</div></div>
+            </div>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-brand-primary/5 flex-1 min-w-[200px] flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-xl font-bold">6</div>
+                <div><div class="text-sm text-brand-text/60">足迹遍布</div><div class="font-bold text-xl text-brand-text">覆盖城市</div></div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex flex-wrap gap-3 mb-8 border-b border-brand-primary/10 pb-4">
+            <button @click="activeTab = 'gallery'" :class="{'active': activeTab === 'gallery'}" class="tab-btn px-6 py-2 rounded-full border font-medium text-sm">
+                方向四：展厅画廊 (Gallery)
+            </button>
+            <button @click="activeTab = 'tree'; setTimeout(() => initTreeChart(), 100)" :class="{'active': activeTab === 'tree'}" class="tab-btn px-6 py-2 rounded-full border font-medium text-sm">
+                方向一：演化族谱 (Evolution)
+            </button>
+            <button @click="activeTab = 'map'; setTimeout(() => initMapChart(), 100)" :class="{'active': activeTab === 'map'}" class="tab-btn px-6 py-2 rounded-full border font-medium text-sm">
+                方向二：城市地理 (Geography)
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-6 pb-20">
+        
+        <!-- Tab 1: Gallery -->
+        <div x-show="activeTab === 'gallery'" x-transition.opacity.duration.500ms>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-brand-text">沉浸式画廊</h2>
+                <div class="flex gap-2">
+                    <span class="px-3 py-1 bg-brand-primary text-white text-xs rounded-full cursor-pointer">全部</span>
+                    <span class="px-3 py-1 bg-white border border-brand-primary/20 text-brand-text text-xs rounded-full cursor-pointer hover:bg-brand-primary/5">植物纹</span>
+                    <span class="px-3 py-1 bg-white border border-brand-primary/20 text-brand-text text-xs rounded-full cursor-pointer hover:bg-brand-primary/5">几何纹</span>
+                </div>
+            </div>
+            
+            <div class="masonry-grid">
+                <!-- Card 1 -->
+                <div class="masonry-item bg-white rounded-2xl overflow-hidden hover-card border border-brand-primary/5">
+                    <div class="relative aspect-square bg-gray-100 group">
+                        <img src="assets/img/003.png" onerror="this.src='https://images.unsplash.com/photo-1550684848-fac1c5b4e853?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="海棠纹">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                            <button class="w-full py-2 bg-white/20 backdrop-blur text-white rounded-lg text-sm font-medium hover:bg-white/30 transition">查看详情</button>
+                        </div>
+                        <span class="absolute top-3 right-3 px-2 py-1 bg-brand-primary/90 text-white text-[10px] font-bold rounded shadow-sm backdrop-blur">原型</span>
+                    </div>
+                    <div class="p-4">
+                        <div class="text-xs text-brand-text/50 mb-1">No.003</div>
+                        <h3 class="font-bold text-lg text-brand-text mb-2">基础海棠纹</h3>
+                        <div class="flex items-center gap-2 text-xs text-brand-text/70">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            广州, 佛山
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="masonry-item bg-white rounded-2xl overflow-hidden hover-card border border-brand-primary/5">
+                    <div class="relative aspect-[4/5] bg-gray-100 group">
+                        <img src="assets/img/001.png" onerror="this.src='https://images.unsplash.com/photo-1518002171953-a080ee817e1f?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="海鸥纹">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                            <button class="w-full py-2 bg-white/20 backdrop-blur text-white rounded-lg text-sm font-medium hover:bg-white/30 transition">查看详情</button>
+                        </div>
+                        <span class="absolute top-3 right-3 px-2 py-1 bg-brand-primary/90 text-white text-[10px] font-bold rounded shadow-sm backdrop-blur">原型</span>
+                    </div>
+                    <div class="p-4">
+                        <div class="text-xs text-brand-text/50 mb-1">No.001</div>
+                        <h3 class="font-bold text-lg text-brand-text mb-2">基础海鸥纹</h3>
+                        <div class="flex items-center gap-2 text-xs text-brand-text/70">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+                            广州
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="masonry-item bg-white rounded-2xl overflow-hidden hover-card border border-brand-primary/5">
+                    <div class="relative aspect-[3/2] bg-gray-100 group">
+                        <img src="assets/img/003-1.png" onerror="this.src='https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="浮雕海棠纹">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                            <button class="w-full py-2 bg-white/20 backdrop-blur text-white rounded-lg text-sm font-medium hover:bg-white/30 transition">查看详情</button>
+                        </div>
+                        <span class="absolute top-3 right-3 px-2 py-1 bg-brand-secondary/90 text-white text-[10px] font-bold rounded shadow-sm backdrop-blur">结构</span>
+                    </div>
+                    <div class="p-4">
+                        <div class="text-xs text-brand-text/50 mb-1">No.003-1</div>
+                        <h3 class="font-bold text-lg text-brand-text mb-2">浮雕海棠纹</h3>
+                        <p class="text-xs text-brand-text/60 mb-3">基于基础海棠纹演化，增加了立体浮雕效果。</p>
+                        <div class="flex items-center gap-2 text-xs text-brand-text/70">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+                            广州
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="masonry-item bg-white rounded-2xl overflow-hidden hover-card border border-brand-primary/5">
+                    <div class="relative aspect-square bg-gray-100 group">
+                        <img src="assets/img/005.png" onerror="this.src='https://images.unsplash.com/photo-1513694203232-719a280e022f?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="基础圆形">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                            <button class="w-full py-2 bg-white/20 backdrop-blur text-white rounded-lg text-sm font-medium hover:bg-white/30 transition">查看详情</button>
+                        </div>
+                        <span class="absolute top-3 right-3 px-2 py-1 bg-brand-primary/90 text-white text-[10px] font-bold rounded shadow-sm backdrop-blur">原型</span>
+                    </div>
+                    <div class="p-4">
+                        <div class="text-xs text-brand-text/50 mb-1">No.005</div>
+                        <h3 class="font-bold text-lg text-brand-text mb-2">基础圆形</h3>
+                        <div class="flex items-center gap-2 text-xs text-brand-text/70">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+                            上海, 广州
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Evolution Tree -->
+        <div x-show="activeTab === 'tree'" style="display: none;" x-transition.opacity.duration.500ms>
+            <div class="bg-white rounded-3xl shadow-sm border border-brand-primary/10 p-6">
+                <div class="mb-4">
+                    <h2 class="text-2xl font-bold text-brand-text">花格演化族谱 (Tree Diagram)</h2>
+                    <p class="text-sm text-brand-text/60 mt-1">直观展示基础几何图形如何衍生出复杂的结构。以「基础海棠纹」和「基础圆形」等为例。</p>
+                </div>
+                <div id="treeChart" class="w-full h-[600px] bg-brand-bg/30 rounded-2xl"></div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Geography Map -->
+        <div x-show="activeTab === 'map'" style="display: none;" x-transition.opacity.duration.500ms>
+            <div class="bg-white rounded-3xl shadow-sm border border-brand-primary/10 p-6">
+                <div class="mb-4">
+                    <h2 class="text-2xl font-bold text-brand-text">城市地理分布 (Geo Map)</h2>
+                    <p class="text-sm text-brand-text/60 mt-1">展示不同花格款式在各城市的出现频次，点位大小代表该城市收录的花格数量。</p>
+                </div>
+                <div class="flex flex-col md:flex-row gap-6">
+                    <div id="mapChart" class="w-full md:w-2/3 h-[500px] bg-[#f5f1e6] rounded-2xl overflow-hidden relative">
+                        <div class="absolute inset-0 flex items-center justify-center z-0 opacity-50">
+                            <div class="animate-pulse">地图加载中...</div>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-1/3">
+                        <h3 class="font-bold text-lg mb-4 text-brand-text">热门城市收录榜</h3>
+                        <ul class="space-y-4">
+                            <li class="bg-brand-bg/50 p-4 rounded-xl border border-brand-primary/5">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-bold text-brand-primary">广州市</span>
+                                    <span class="text-sm font-medium bg-white px-2 py-1 rounded-md shadow-sm text-brand-primary">32 款</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-1.5"><div class="bg-brand-primary h-1.5 rounded-full" style="width: 60%"></div></div>
+                                <p class="text-xs text-brand-text/60 mt-2">典型代表：海棠纹系列、海鸥纹</p>
+                            </li>
+                            <li class="bg-brand-bg/50 p-4 rounded-xl border border-brand-primary/5">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-bold text-brand-primary">佛山市</span>
+                                    <span class="text-sm font-medium bg-white px-2 py-1 rounded-md shadow-sm text-brand-secondary">15 款</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-1.5"><div class="bg-brand-secondary h-1.5 rounded-full" style="width: 30%"></div></div>
+                                <p class="text-xs text-brand-text/60 mt-2">典型代表：基础十字纹</p>
+                            </li>
+                            <li class="bg-brand-bg/50 p-4 rounded-xl border border-brand-primary/5">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-bold text-brand-primary">上海市</span>
+                                    <span class="text-sm font-medium bg-white px-2 py-1 rounded-md shadow-sm text-brand-secondary">7 款</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-1.5"><div class="bg-brand-secondary h-1.5 rounded-full" style="width: 15%"></div></div>
+                                <p class="text-xs text-brand-text/60 mt-2">典型代表：基础圆形</p>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        let treeChartInstance = null;
+        let mapChartInstance = null;
+
+        function initTreeChart() {
+            if (treeChartInstance) return;
+            const chartDom = document.getElementById('treeChart');
+            if(!chartDom) return;
+            treeChartInstance = echarts.init(chartDom);
+            
+            const data = {
+                name: '水泥花格\n(总类)',
+                children: [
+                    {
+                        name: 'No.003\n基础海棠纹\n(原型)',
+                        itemStyle: { color: '#5e3643' },
+                        children: [
+                            { name: 'No.003-1\n浮雕海棠纹' },
+                            { name: 'No.003-2\n镂空的海棠纹' },
+                            { name: 'No.003-3\n直线方孔海棠' },
+                            { name: 'No.003-4\n长方形海棠纹' },
+                            { name: 'No.003-5\n斜十字海棠纹' },
+                            { name: 'No.003-6\n菱形+海棠纹' },
+                            { name: 'No.003-7\n四角点缀海棠' }
+                        ]
+                    },
+                    {
+                        name: 'No.005\n基础圆形\n(原型)',
+                        itemStyle: { color: '#7c4d5c' },
+                        children: [
+                            { name: 'No.005-1\n双圆环' },
+                            { name: 'No.005-2\n相连椭圆形' },
+                            { name: 'No.005-3\n拼接钱字纹' },
+                            { name: 'No.005-4\n连排铜钱纹' }
+                        ]
+                    },
+                    {
+                        name: 'No.001\n基础海鸥纹',
+                        itemStyle: { color: '#a07886' },
+                        children: [
+                            { name: 'No.001-1\n极简海鸥' }
+                        ]
+                    }
+                ]
+            };
+
+            const option = {
+                tooltip: { trigger: 'item', triggerOn: 'mousemove' },
+                series: [
+                    {
+                        type: 'tree',
+                        data: [data],
+                        top: '5%',
+                        left: '10%',
+                        bottom: '5%',
+                        right: '20%',
+                        symbolSize: 12,
+                        label: {
+                            position: 'left',
+                            verticalAlign: 'middle',
+                            align: 'right',
+                            fontSize: 14,
+                            color: '#454545',
+                            backgroundColor: '#fff',
+                            padding: [6, 10],
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: '#e5e7eb',
+                            shadowBlur: 10,
+                            shadowColor: 'rgba(0,0,0,0.05)'
+                        },
+                        leaves: {
+                            label: {
+                                position: 'right',
+                                verticalAlign: 'middle',
+                                align: 'left',
+                                backgroundColor: 'transparent',
+                                borderWidth: 0,
+                                shadowBlur: 0
+                            }
+                        },
+                        emphasis: { focus: 'descendant' },
+                        expandAndCollapse: true,
+                        animationDuration: 550,
+                        animationDurationUpdate: 750,
+                        lineStyle: {
+                            color: '#5e3643',
+                            opacity: 0.3,
+                            curveness: 0.6,
+                            width: 2
+                        }
+                    }
+                ]
+            };
+            treeChartInstance.setOption(option);
+            window.addEventListener('resize', () => treeChartInstance.resize());
+        }
+
+        function initMapChart() {
+            if (mapChartInstance) return;
+            const chartDom = document.getElementById('mapChart');
+            if(!chartDom) return;
+            mapChartInstance = echarts.init(chartDom);
+
+            // Mock Data for scatter on China map
+            const geoCoordMap = {
+                '广州': [113.280637, 23.125178],
+                '佛山': [113.122717, 23.028762],
+                '上海': [121.472644, 31.231706],
+                '深圳': [114.085947, 22.547],
+                '泉州': [118.589421, 24.908853],
+                '厦门': [118.11022, 24.490474]
+            };
+            const data = [
+                {name: '广州', value: 32},
+                {name: '佛山', value: 15},
+                {name: '上海', value: 7},
+                {name: '深圳', value: 5},
+                {name: '泉州', value: 3},
+                {name: '厦门', value: 2}
+            ];
+
+            const convertData = function (data) {
+                const res = [];
+                for (let i = 0; i < data.length; i++) {
+                    const geoCoord = geoCoordMap[data[i].name];
+                    if (geoCoord) {
+                        res.push({
+                            name: data[i].name,
+                            value: geoCoord.concat(data[i].value)
+                        });
+                    }
+                }
+                return res;
+            };
+
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'item',
+                    formatter: function (params) {
+                        return '<div class="font-bold">' + params.name + '</div>' + 
+                               '<div class="text-sm">' + params.value[2] + ' 款收录花格</div>';
+                    },
+                    backgroundColor: 'rgba(255,255,255,0.95)',
+                    borderColor: '#e5e7eb',
+                    textStyle: { color: '#454545' }
+                },
+                geo: {
+                    map: 'china',
+                    roam: true,
+                    zoom: 1.5,
+                    center: [113.280637, 28.125178], // focus more on south east
+                    label: { emphasis: { show: false } },
+                    itemStyle: {
+                        normal: {
+                            areaColor: '#e0d8c8',
+                            borderColor: '#f5f1e6',
+                            borderWidth: 1.5
+                        },
+                        emphasis: {
+                            areaColor: '#d1c7b3'
+                        }
+                    }
+                },
+                series: [
+                    {
+                        name: '花窗数量',
+                        type: 'effectScatter',
+                        coordinateSystem: 'geo',
+                        data: convertData(data),
+                        symbolSize: function (val) {
+                            return Math.max(val[2] * 0.8, 12); // Scale bubble size
+                        },
+                        showEffectOn: 'render',
+                        rippleEffect: {
+                            brushType: 'stroke',
+                            scale: 2.5
+                        },
+                        hoverAnimation: true,
+                        label: {
+                            normal: {
+                                formatter: '{b}',
+                                position: 'right',
+                                show: true,
+                                color: '#5e3643',
+                                fontWeight: 'bold',
+                                fontSize: 13,
+                                textShadowColor: '#fff',
+                                textShadowBlur: 2
+                            }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: '#5e3643',
+                                shadowBlur: 10,
+                                shadowColor: 'rgba(94, 54, 67, 0.5)'
+                            }
+                        },
+                        zlevel: 1
+                    }
+                ]
+            };
+            mapChartInstance.setOption(option);
+            window.addEventListener('resize', () => mapChartInstance.resize());
+        }
+    </script>
+</body>
+</html>

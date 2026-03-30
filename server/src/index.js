@@ -36,7 +36,8 @@ const WORKS_FILE = path.resolve(process.cwd(), '../website/data/works.json')
 async function loadWorks() {
   try {
     const data = await fs.readFile(WORKS_FILE, 'utf-8')
-    localWorks = JSON.parse(data)
+    const parsedData = JSON.parse(data)
+    localWorks = Array.isArray(parsedData) ? parsedData : (parsedData.data || [])
     console.log(`Loaded ${localWorks.length} works from file`)
   } catch (e) {
     console.log('No local works file found, starting empty')
@@ -112,7 +113,8 @@ const POKEDEX_CONFIG_FILE = path.resolve(process.cwd(), '../website/data/pokedex
 async function loadPokedexConfig() {
   try {
     const data = await fs.readFile(POKEDEX_CONFIG_FILE, 'utf-8')
-    localPokedexConfig = JSON.parse(data)
+    const parsedData = JSON.parse(data)
+    localPokedexConfig = parsedData.data ? parsedData.data : parsedData
     console.log('Loaded pokedex config')
   } catch (e) {
     console.log('No local pokedex config found, using defaults')
@@ -142,7 +144,9 @@ async function savePokedexConfig() {
 async function loadPokedex() {
   try {
     const data = await fs.readFile(POKEDEX_FILE, 'utf-8')
-    localPokedex = JSON.parse(data)
+    const parsedData = JSON.parse(data)
+    // 兼容 { data: [...] } 格式或直接是数组的格式
+    localPokedex = Array.isArray(parsedData) ? parsedData : (parsedData.data || [])
     console.log(`Loaded ${localPokedex.length} pokedex entries from file`)
   } catch (e) {
     console.log('No local pokedex file found or error reading it, starting empty')

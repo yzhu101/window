@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画廊深度优化灵感 Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { bg: '#f5f1e6', text: '#454545', primary: '#5e3643', secondary: '#7c4d5c' }
+                    },
+                    fontFamily: {
+                        'handwriting': ['"Ma Shan Zheng"', 'cursive']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #f5f1e6; color: #454545; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; overflow-x: hidden; }
+        
+        /* Tab Styles */
+        .tab-btn { transition: all 0.3s ease; }
+        .tab-btn.active { background-color: #5e3643; color: white; border-color: #5e3643; }
+        .tab-btn:not(.active) { background-color: transparent; color: #5e3643; border-color: #5e3643; }
+        .tab-btn:not(.active):hover { background-color: rgba(94, 54, 67, 0.1); }
+
+        /* 横向滚动隐藏滚动条 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 拍立得特效 */
+        .polaroid-card {
+            background: #fff;
+            padding: 1rem 1rem 4rem 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+        .polaroid-card::before {
+            content: ''; position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+            width: 30px; height: 12px; background: rgba(255,255,255,0.4);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); border-radius: 2px; z-index: 10;
+        } /* 模拟胶带 */
+        .polaroid-card:hover { transform: scale(1.05) rotate(0deg) !important; z-index: 20; box-shadow: 0 20px 40px rgba(0,0,0,0.25); }
+        .polaroid-card img { filter: grayscale(80%) contrast(1.2); transition: filter 0.5s ease; }
+        .polaroid-card:hover img { filter: grayscale(0%) contrast(1); }
+
+        /* 聚光灯背景 */
+        .spotlight-bg {
+            background: radial-gradient(circle at center, rgba(30, 30, 30, 0.7) 0%, rgba(10, 10, 10, 0.98) 100%);
+            backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col" x-data="galleryDemos()">
+    
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-40 bg-brand-bg/90 backdrop-blur border-b border-brand-primary/10 px-6 py-4 flex justify-between items-center">
+        <div class="text-brand-primary font-bold text-lg flex items-center gap-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+            画廊展厅深度优化
+        </div>
+        <div class="flex gap-2">
+            <button @click="activeTab = 'horizontal'" :class="{'active': activeTab === 'horizontal'}" class="tab-btn px-4 py-1.5 rounded-full border text-sm">灵感2：横向画卷</button>
+            <button @click="activeTab = 'polaroid'" :class="{'active': activeTab === 'polaroid'}" class="tab-btn px-4 py-1.5 rounded-full border text-sm">灵感3：拍立得档案</button>
+            <button @click="activeTab = 'spotlight'" :class="{'active': activeTab === 'spotlight'}" class="tab-btn px-4 py-1.5 rounded-full border text-sm">灵感4：聚光灯沉浸</button>
+        </div>
+    </nav>
+
+    <main class="flex-1 relative">
+        
+        <!-- ==========================================
+             灵感 2: 横向视差滚动 (Horizontal Scroll)
+             ========================================== -->
+        <div x-show="activeTab === 'horizontal'" class="absolute inset-0 flex flex-col" x-transition.opacity.duration.500ms>
+            <div class="px-10 pt-8 pb-4">
+                <h2 class="text-3xl font-extrabold text-brand-text mb-2">城市漫步 · 建筑画卷</h2>
+                <p class="text-brand-text/60">打破传统上下滑动，采用横向长卷轴浏览，支持鼠标滚轮直接横向滚动，营造在美术馆长廊漫步的错觉。</p>
+            </div>
+            
+            <!-- 横向滚动容器 -->
+            <div id="h-scroll-container" class="flex-1 flex items-center overflow-x-auto no-scrollbar px-10 pb-10 gap-12 snap-x snap-mandatory">
+                
+                <template x-for="(item, index) in items" :key="index">
+                    <div class="snap-center shrink-0 w-[350px] md:w-[450px] group relative">
+                        <!-- 装饰线条 -->
+                        <div class="absolute -inset-4 border border-brand-primary/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        
+                        <div class="bg-white p-4 rounded-2xl shadow-lg border border-brand-primary/5 transition-transform duration-700 hover:scale-[1.02]">
+                            <div class="aspect-[3/4] overflow-hidden rounded-xl bg-gray-100 relative">
+                                <img :src="item.img" @error="$el.src='https://images.unsplash.com/photo-1518002171953-a080ee817e1f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'" 
+                                     class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out" :alt="item.name">
+                                <!-- 遮罩与悬浮文字 -->
+                                <div class="absolute inset-0 bg-gradient-to-t from-brand-primary/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6">
+                                    <span class="text-white/80 text-sm font-medium mb-1" x-text="item.id"></span>
+                                    <h3 class="text-white text-2xl font-bold" x-text="item.name"></h3>
+                                    <p class="text-white/90 text-sm mt-2 flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+                                        <span x-text="item.city"></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+                
+                <!-- 结尾占位 -->
+                <div class="snap-center shrink-0 w-[100px] h-full flex items-center justify-center">
+                    <div class="text-brand-text/30 font-bold text-xl writing-vertical-rl">滑动继续探索 →</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             灵感 3: 拍立得/胶片档案 (Polaroid)
+             ========================================== -->
+        <div x-show="activeTab === 'polaroid'" class="absolute inset-0 overflow-y-auto" style="display: none;" x-transition.opacity.duration.500ms>
+            <!-- 软木板纹理背景 -->
+            <div class="absolute inset-0 opacity-5 pointer-events-none" style="background-image: url('data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100\' height=\'100\' filter=\'url(%23noise)\' opacity=\'0.5\'/%3E%3C/svg%3E');"></div>
+            
+            <div class="max-w-6xl mx-auto px-6 py-12 relative z-10">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl font-extrabold text-brand-text mb-4 font-handwriting text-5xl">花格旧影档案</h2>
+                    <p class="text-brand-text/60 max-w-2xl mx-auto">以宝丽来相纸的形式呈现，默认带有复古黑白滤镜，悬停时恢复彩色。手写体编号强化“实地探访收集”的档案感。</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-12 px-4">
+                    <template x-for="(item, index) in items" :key="index">
+                        <!-- 动态生成不同的旋转角度 -3deg 到 3deg -->
+                        <div class="polaroid-card cursor-pointer" 
+                             :style="`transform: rotate(${item.rotation}deg);`">
+                            <div class="aspect-square bg-gray-200 mb-4 overflow-hidden shadow-inner">
+                                <img :src="item.img" @error="$el.src='https://images.unsplash.com/photo-1513694203232-719a280e022f?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'" 
+                                     class="w-full h-full object-cover" :alt="item.name">
+                            </div>
+                            <div class="absolute bottom-4 left-0 w-full text-center">
+                                <div class="font-handwriting text-2xl text-brand-primary" x-text="item.name"></div>
+                                <div class="text-xs text-gray-400 mt-1 uppercase tracking-widest" x-text="`${item.id} · ${item.city}`"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             灵感 4: 聚光灯沉浸 (Spotlight/Lightbox)
+             ========================================== -->
+        <div x-show="activeTab === 'spotlight'" class="absolute inset-0 overflow-y-auto bg-[#1a1a1a]" style="display: none;" x-transition.opacity.duration.500ms>
+            <div class="max-w-7xl mx-auto px-6 py-12">
+                <div class="flex justify-between items-end mb-10 border-b border-white/10 pb-6">
+                    <div>
+                        <h2 class="text-3xl font-extrabold text-white mb-2 tracking-wide">Spotlight 展厅</h2>
+                        <p class="text-white/50">暗调环境，点击卡片进入聚光灯模式，感受纯粹的光影与几何之美。</p>
+                    </div>
+                </div>
+
+                <!-- 极简网格 -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <template x-for="(item, index) in items" :key="index">
+                        <div @click="openSpotlight(item)" class="group cursor-pointer relative aspect-square overflow-hidden bg-white/5 rounded-sm">
+                            <img :src="item.img" @error="$el.src='https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'" 
+                                 class="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500">
+                            <div class="absolute inset-0 border border-white/0 group-hover:border-white/20 transition-colors duration-500"></div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- 聚光灯 Modal -->
+            <div x-show="selectedItem" 
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 backdrop-blur-none"
+                 x-transition:enter-end="opacity-100 backdrop-blur-md"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 backdrop-blur-md"
+                 x-transition:leave-end="opacity-0 backdrop-blur-none"
+                 class="fixed inset-0 z-50 flex items-center justify-center spotlight-bg"
+                 @keydown.escape.window="selectedItem = null">
+                
+                <!-- 关闭按钮 -->
+                <button @click="selectedItem = null" class="absolute top-8 right-8 text-white/50 hover:text-white transition-colors p-2">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+
+                <!-- 弹窗内容 -->
+                <div class="flex flex-col md:flex-row items-center max-w-6xl w-full px-8 gap-12" @click.away="selectedItem = null">
+                    <!-- 左侧：高清大图 -->
+                    <div class="w-full md:w-3/5 relative group">
+                        <img :src="selectedItem?.img" @error="$el.src='https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80'" 
+                             class="w-full h-auto max-h-[80vh] object-contain rounded-sm shadow-[0_0_80px_rgba(255,255,255,0.15)] ring-1 ring-white/10">
+                        <!-- 光晕特效 -->
+                        <div class="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+                    </div>
+                    
+                    <!-- 右侧：艺术展签 -->
+                    <div class="w-full md:w-2/5 text-white">
+                        <div class="text-brand-primary font-mono text-sm tracking-[0.3em] mb-4" x-text="selectedItem?.id"></div>
+                        <h3 class="text-5xl font-bold mb-6 tracking-tight" x-text="selectedItem?.name"></h3>
+                        
+                        <div class="h-[1px] w-12 bg-white/20 mb-6"></div>
+                        
+                        <div class="space-y-4 text-white/70 text-sm font-light">
+                            <div class="flex items-center gap-4">
+                                <span class="uppercase tracking-wider text-white/40 w-16">类别</span>
+                                <span class="bg-white/10 px-3 py-1 rounded-sm text-white" x-text="selectedItem?.type"></span>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="uppercase tracking-wider text-white/40 w-16">发现地</span>
+                                <span class="flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+                                    <span x-text="selectedItem?.city"></span>
+                                </span>
+                            </div>
+                            <div class="flex items-start gap-4 pt-4">
+                                <span class="uppercase tracking-wider text-white/40 w-16">描述</span>
+                                <p class="leading-relaxed flex-1">
+                                    这是一款经典的<span x-text="selectedItem?.name"></span>。它通过精妙的几何结构控制光线的进入，在不同时间段能在室内投下迷人的光斑。是华南地区极具代表性的建筑语言。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Alpine.js 数据和逻辑
+        function galleryDemos() {
+            return {
+                activeTab: 'horizontal', // 'horizontal', 'polaroid', 'spotlight'
+                selectedItem: null,
+                items: [
+                    { id: 'No.003', name: '基础海棠纹', city: '广州', type: '原型', img: 'assets/img/003.png', rotation: -2 },
+                    { id: 'No.001', name: '基础海鸥纹', city: '广州', type: '原型', img: 'assets/img/001.png', rotation: 3 },
+                    { id: 'No.003-1', name: '浮雕海棠纹', city: '佛山', type: '结构', img: 'assets/img/003-1.png', rotation: -1 },
+                    { id: 'No.005', name: '基础圆形', city: '上海', type: '原型', img: 'assets/img/005.png', rotation: 2 },
+                    { id: 'No.004', name: '基础方胜纹', city: '泉州', type: '原型', img: 'assets/img/004.png', rotation: -3 },
+                    { id: 'No.006', name: '连排铜钱纹', city: '广州', type: '结构', img: 'assets/img/006.png', rotation: 1 },
+                    { id: 'No.007', name: '复杂几何纹', city: '深圳', type: '结构', img: 'assets/img/007.png', rotation: -2 },
+                    { id: 'No.008', name: '斜十字纹', city: '厦门', type: '原型', img: 'assets/img/008.png', rotation: 2 },
+                ],
+                openSpotlight(item) {
+                    this.selectedItem = item;
+                },
+                init() {
+                    // 处理横向滚动 (将鼠标垂直滚动映射为横向滚动)
+                    const scrollContainer = document.getElementById('h-scroll-container');
+                    if (scrollContainer) {
+                        scrollContainer.addEventListener('wheel', (evt) => {
+                            // 只有在横向卷轴 tab 激活时才劫持滚动
+                            if (this.activeTab === 'horizontal') {
+                                evt.preventDefault();
+                                scrollContainer.scrollLeft += evt.deltaY;
+                            }
+                        });
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

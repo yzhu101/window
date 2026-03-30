@@ -1,9 +1,9 @@
 {
   "types": [
     {
-      "key": "animal",
-      "label": "🪽 生灵纹系",
-      "description": "以飞鸟、昆虫等动物为母题的生动纹样。"
+      "key": "bird",
+      "label": "🪽 鸟类纹系",
+      "description": "线条如同飞翔的海鸥，也像波浪，是最具代表性的花格类型。"
     },
     {
       "key": "geometric",
@@ -21,19 +21,14 @@
       "description": "尚未分类的未知纹样，待后续补充。"
     },
     {
-      "key": "wave",
-      "label": "🌊 波浪纹系",
-      "description": "折线或曲线构成的波浪"
-    },
-    {
-      "key": "object",
-      "label": "🪭 物品纹系",
-      "description": "代表具体的物件"
+      "key": "11",
+      "label": "11",
+      "description": "1111"
     }
   ],
   "categories": [
-    "基础款",
-    "衍生款",
+    "原型",
+    "结构",
     "材质",
     "其他"
   ]

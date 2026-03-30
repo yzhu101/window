@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<body>
+<button id="btn">Click me</button>
+<script>
+  function showDetail(desc) {
+    console.log("desc is:", desc);
+  }
+  const str = "Hello\r\nWorld";
+  const escaped = str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n').replace(/\r/g, '');
+  document.getElementById('btn').outerHTML = `<button onclick="showDetail('${escaped}')">Click me</button>`;
+</script>
+</body>
+</html>
