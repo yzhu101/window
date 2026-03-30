@@ -54,6 +54,69 @@
     }
 
     /* --- 树状图样式核心 --- */
+
+    /* --- 新版横向滚动布局 --- */
+    .family-section {
+      margin-bottom: 50px;
+    }
+    
+    .scroll-container {
+      display: flex;
+      flex-direction: row;
+      gap: 32px;
+      overflow-x: auto;
+      padding-bottom: 24px;
+      align-items: flex-start;
+      /* 隐藏滚动条 */
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .scroll-container::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .tile-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    /* 调整连接线：隐藏原有的树状连接线 */
+    .tree-connector {
+      display: none;
+    }
+    
+    .children-container {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 16px;
+      margin-left: 0;
+      position: relative;
+      animation: slideDown 0.3s ease-out;
+      align-items: center;
+    }
+    
+    /* 垂直贯穿线居中 */
+    .children-container::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: -16px;
+      bottom: 0;
+      width: 2px;
+      background: rgba(94, 54, 67, 0.2);
+      transform: translateX(-50%);
+      z-index: -1;
+    }
+    
+    /* 为了显示，覆盖原来的 .children-container.show */
+    .children-container.show {
+      display: flex;
+      margin-bottom: 0;
+    }
+
     .family-section { margin-bottom: 50px; }
     .family-header { margin-bottom: 24px; border-left: 4px solid #5e3643; padding-left: 12px; }
     .family-header h3 { color: #5e3643; font-size: 20px; }
@@ -79,7 +142,7 @@
     /* 连接线系统 */
     .tree-connector {
       width: 30px;
-      height: 60px; /* 连接线高度 */
+      height: 76px; /* 连接线高度 */
       border-left: 2px solid #ccc;
       border-bottom: 2px solid #ccc;
       margin-right: 10px;
@@ -92,66 +155,81 @@
     .tree-level.root .tree-connector { display: none; }
     
     /* 节点卡片 */
-    .node-card {
-      background: #fff;
-      border: 1px solid rgba(94, 54, 67, 0.15);
-      border-radius: 12px;
-      padding: 10px;
+    .tile-card {
+      min-width: 140px;
+      height: 160px;
+      background: #F4F0E8;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 20px;
+      padding: 16px 16px 20px 16px;
       display: flex;
-      align-items: center;
-      gap: 12px;
-      width: 100%;
-      max-width: 320px;
+      flex-direction: column;
       position: relative;
       transition: all 0.2s;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.06);
     }
     
-    .node-card:hover {
+    .tile-card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 12px rgba(94, 54, 67, 0.1);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
       border-color: #5e3643;
     }
 
-    .pixel-icon {
-      width: 48px;
-      height: 48px;
+    .tile-icon {
+      width: 60px;
+      height: 60px;
       background: #5e3643;
-      border-radius: 8px;
+      border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
-      image-rendering: pixelated;
-      border: 1px solid #5e3643;
+      padding: 8px;
     }
-    .pixel-icon img { width: 32px; height: 32px; opacity: 0.9; }
+    .tile-icon img { 
+      width: 100%; 
+      height: 100%; 
+      object-fit: contain; 
+      opacity: 0.9; 
+    }
     
-    .node-info { flex: 1; }
-    .node-name { font-weight: bold; font-size: 15px; color: #333; }
-    .node-tags { display: flex; gap: 6px; margin-top: 4px; }
-    .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #eee; color: #666; }
-    .tag.origin { background: #eee; color: #666; }
-    .tag.variant { background: #eee; color: #666; }
-    .tag.material { background: #eee; color: #666; }
+    .tile-top-right {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      color: #767676;
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    .tile-name { 
+      color: #2F2F2F;
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+    
+    .tile-tag { 
+      color: #9A9A9A;
+      font-size: 10px;
+      margin-top: 2px;
+    }
 
     /* 可折叠/展开的交互样式 */
-    .node-card.has-children {
+    .tile-card.has-children {
       cursor: pointer;
-      padding-right: 32px; /* 给折叠图标留位 */
     }
     
-    .node-card.has-children::after {
+    .tile-card.has-children::after {
       content: '+';
       position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 20px;
-      height: 20px;
+      right: 16px;
+      bottom: 16px;
+      width: 24px;
+      height: 24px;
       background: #eee;
       border-radius: 50%;
       text-align: center;
-      line-height: 20px;
+      line-height: 24px;
       color: #666;
       font-weight: bold;
       font-family: monospace;
@@ -159,12 +237,12 @@
     }
     
     /* 展开状态 */
-    .node-card.has-children.expanded {
+    .tile-card.has-children.expanded {
       background-color: #fff8f0;
       border-color: #5e3643;
     }
     
-    .node-card.has-children.expanded::after {
+    .tile-card.has-children.expanded::after {
       content: '-';
       background: #5e3643;
       color: #fff;
@@ -206,7 +284,7 @@
     }
 
     /* 待解锁 */
-    .node-card.locked { opacity: 0.6; filter: grayscale(1); border-style: dashed; }
+    .tile-card.locked { opacity: 0.6; filter: grayscale(1); border-style: dashed; }
     
     .upload-cta {
       margin-top: 40px;
@@ -262,18 +340,22 @@
         <h3>🪽 鸟类纹系</h3>
         <p>线条如同飞翔的海鸥，也像波浪，是最具代表性的花格类型。</p>
       </div>
+
+<div class="scroll-container">
       
       <!-- 根节点 -->
-      <div class="tree-level root">
+      <div class="tile-wrapper">
+<div class="tree-level root">
         <!-- 添加 has-children 类来触发交互 -->
-        <div class="node-card has-children">
-          <div class="pixel-icon">
+        <div class="tile-card has-children">
+          <div class="tile-icon">
+
             <img src="/assets/img/001.png" alt="基础海鸥纹">
+          
           </div>
-          <div class="node-info">
-            <div class="node-name">基础海鸥纹</div>
-            <div class="node-tags"><span class="tag origin">原型</span><span class="tag">No.001</span></div>
-          </div>
+          <div class="tile-top-right">No.001</div>
+          <div class="tile-name">基础海鸥纹</div>
+          <div class="tile-tag">原型</div>
         </div>
       </div>
 
@@ -284,55 +366,64 @@
         <!-- 子节点 3 -->
         <div class="tree-level">
           <div class="tree-connector"></div>
-          <div class="node-card">
-            <div class="pixel-icon" style="background: #f0f8ff;">
+          <div class="tile-card">
+          <div class="tile-icon" style="background: #5e3643;">
+
               <img src="/assets/img/001-1.png" alt="极简海鸥">
-            </div>
-            <div class="node-info">
-              <div class="node-name">极简海鸥</div>
-            <div class="node-tags"><span class="tag variant">结构</span><span class="tag">No.001-1</span></div>
-            </div>
+            
           </div>
+          <div class="tile-top-right">No.001-1</div>
+          <div class="tile-name">极简海鸥</div>
+          <div class="tile-tag">结构</div>
+        </div>
         </div>
 
         <!-- 子节点 4 (待解锁) -->
         <div class="tree-level">
           <div class="tree-connector"></div>
-          <div class="node-card locked">
-            <div class="pixel-icon">❓</div>
-            <div class="node-info">
-              <div class="node-name">???</div>
-              <div class="node-tags"><span class="tag">未发现</span></div>
-            </div>
+          <div class="tile-card locked">
+          <div class="tile-icon">
+❓
           </div>
+          <div class="tile-top-right">???</div>
+          <div class="tile-name">???</div>
+          <div class="tile-tag">未发现</div>
+        </div>
         </div>
 
       </div>
       
-      <div class="tree-level root">
-        <div class="node-card has-children">
-          <div class="pixel-icon">
+      </div>
+<div class="tile-wrapper">
+<div class="tree-level root">
+        <div class="tile-card has-children">
+          <div class="tile-icon">
+
             <img src="/assets/img/009.png" alt="基础白鸽纹" style="transform: scale(0.9);">
+          
           </div>
-          <div class="node-info">
-            <div class="node-name">基础白鸽纹</div>
-            <div class="node-tags"><span class="tag origin">原型</span><span class="tag">No.002</span></div>
-          </div>
+          <div class="tile-top-right">No.002</div>
+          <div class="tile-name">基础白鸽纹</div>
+          <div class="tile-tag">原型</div>
         </div>
       </div>
       <div class="children-container">
         <div class="tree-level">
           <div class="tree-connector"></div>
-          <div class="node-card locked">
-             <div class="pixel-icon">❓</div>
-            <div class="node-info">
-              <div class="node-name">???</div>
-              <div class="node-tags"><span class="tag">未发现</span></div>
-            </div>
+          <div class="tile-card locked">
+          <div class="tile-icon">
+❓
           </div>
+          <div class="tile-top-right">???</div>
+          <div class="tile-name">???</div>
+          <div class="tile-tag">未发现</div>
+        </div>
         </div>
       </div>
     </div>
+
+</div>
+</div>
 
 
     <!-- 谱系 2: 几何系 -->
@@ -342,90 +433,107 @@
         <p>由基础几何图形构成的严谨图案。</p>
       </div>
 
-      <div class="tree-level root">
-        <div class="node-card has-children">
-          <div class="pixel-icon">
+<div class="scroll-container">
+
+      <div class="tile-wrapper">
+<div class="tree-level root">
+        <div class="tile-card has-children">
+          <div class="tile-icon">
+
             <img src="/assets/img/004.png" alt="基础海棠纹">
+          
           </div>
-          <div class="node-info">
-            <div class="node-name">基础海棠纹</div>
-            <div class="node-tags"><span class="tag origin">原型</span><span class="tag">No.003</span></div>
-          </div>
+          <div class="tile-top-right">No.003</div>
+          <div class="tile-name">基础海棠纹</div>
+          <div class="tile-tag">原型</div>
         </div>
       </div>
       <div class="children-container">
         <div class="tree-level">
           <div class="tree-connector"></div>
-          <div class="node-card locked">
-             <div class="pixel-icon">❓</div>
-            <div class="node-info">
-              <div class="node-name">???</div>
-              <div class="node-tags"><span class="tag">未发现</span></div>
-            </div>
+          <div class="tile-card locked">
+          <div class="tile-icon">
+❓
           </div>
+          <div class="tile-top-right">???</div>
+          <div class="tile-name">???</div>
+          <div class="tile-tag">未发现</div>
+        </div>
         </div>
       </div>
       
-      <div class="tree-level root">
-        <div class="node-card has-children">
-          <div class="pixel-icon">
+      </div>
+<div class="tile-wrapper">
+<div class="tree-level root">
+        <div class="tile-card has-children">
+          <div class="tile-icon">
+
             <img src="/assets/img/006.png" alt="基础方胜纹">
+          
           </div>
-          <div class="node-info">
-            <div class="node-name">基础方胜纹</div>
-            <div class="node-tags"><span class="tag origin">原型</span><span class="tag">No.004</span></div>
-          </div>
+          <div class="tile-top-right">No.004</div>
+          <div class="tile-name">基础方胜纹</div>
+          <div class="tile-tag">原型</div>
         </div>
       </div>
       <div class="children-container">
         <div class="tree-level">
           <div class="tree-connector"></div>
-          <div class="node-card locked">
-             <div class="pixel-icon">❓</div>
-            <div class="node-info">
-              <div class="node-name">???</div>
-              <div class="node-tags"><span class="tag">未发现</span></div>
-            </div>
+          <div class="tile-card locked">
+          <div class="tile-icon">
+❓
           </div>
+          <div class="tile-top-right">???</div>
+          <div class="tile-name">???</div>
+          <div class="tile-tag">未发现</div>
+        </div>
         </div>
       </div>
 
-      <div class="tree-level root">
-        <div class="node-card has-children">
-          <div class="pixel-icon">
+      </div>
+<div class="tile-wrapper">
+<div class="tree-level root">
+        <div class="tile-card has-children">
+          <div class="tile-icon">
+
             <img src="/assets/img/007.png" alt="基础圆形">
+          
           </div>
-          <div class="node-info">
-            <div class="node-name">基础圆形</div>
-            <div class="node-tags"><span class="tag origin">原型</span><span class="tag">No.005</span></div>
-          </div>
+          <div class="tile-top-right">No.005</div>
+          <div class="tile-name">基础圆形</div>
+          <div class="tile-tag">原型</div>
         </div>
       </div>
       <div class="children-container">
         <div class="tree-level">
           <div class="tree-connector"></div>
-          <div class="node-card">
-            <div class="pixel-icon">
+          <div class="tile-card">
+          <div class="tile-icon">
+
               <img src="/assets/img/008.png" style="transform: scale(0.9);" alt="双圆环">
-            </div>
-            <div class="node-info">
-              <div class="node-name">双圆环</div>
-            <div class="node-tags"><span class="tag variant">结构</span><span class="tag">No.005-1</span></div>
-            </div>
+            
           </div>
+          <div class="tile-top-right">No.005-1</div>
+          <div class="tile-name">双圆环</div>
+          <div class="tile-tag">结构</div>
+        </div>
         </div>
         <div class="tree-level">
           <div class="tree-connector"></div>
-          <div class="node-card locked">
-             <div class="pixel-icon">❓</div>
-            <div class="node-info">
-              <div class="node-name">???</div>
-              <div class="node-tags"><span class="tag">未发现</span></div>
-            </div>
+          <div class="tile-card locked">
+          <div class="tile-icon">
+❓
           </div>
+          <div class="tile-top-right">???</div>
+          <div class="tile-name">???</div>
+          <div class="tile-tag">未发现</div>
+        </div>
         </div>
       </div>
     </div>
+
+</div>
+</div>
 
     <div class="family-section">
       <div class="family-header">
@@ -433,44 +541,56 @@
         <p>以花瓣、枝叶与藤蔓为母题的柔和纹样。</p>
       </div>
 
-      <div class="tree-level root">
-        <div class="node-card has-children">
-          <div class="pixel-icon">
+<div class="scroll-container">
+
+      <div class="tile-wrapper">
+<div class="tree-level root">
+        <div class="tile-card has-children">
+          <div class="tile-icon">
+
             <img src="/assets/img/005.png" alt="基础花瓣纹">
+          
           </div>
-          <div class="node-info">
-            <div class="node-name">基础花瓣纹</div>
-            <div class="node-tags"><span class="tag origin">原型</span><span class="tag">No.006</span></div>
-          </div>
+          <div class="tile-top-right">No.006</div>
+          <div class="tile-name">基础花瓣纹</div>
+          <div class="tile-tag">原型</div>
         </div>
       </div>
       
       <div class="children-container">
         <div class="tree-level">
           <div class="tree-connector"></div>
-          <div class="node-card locked">
-             <div class="pixel-icon">❓</div>
-            <div class="node-info">
-              <div class="node-name">???</div>
-              <div class="node-tags"><span class="tag">未发现</span></div>
-            </div>
+          <div class="tile-card locked">
+          <div class="tile-icon">
+❓
           </div>
+          <div class="tile-top-right">???</div>
+          <div class="tile-name">???</div>
+          <div class="tile-tag">未发现</div>
+        </div>
         </div>
       </div>
     </div>
+
+</div>
+</div>
     
     <div class="family-section">
       <div class="family-header">
         <h3>❓ ???纹系</h3>
         <p>尚未分类的未知纹样，待后续补充。</p>
       </div>
-      <div class="tree-level root">
-        <div class="node-card locked">
-          <div class="pixel-icon">❓</div>
-          <div class="node-info">
-            <div class="node-name">???</div>
-            <div class="node-tags"><span class="tag">未发现</span></div>
+
+<div class="scroll-container">
+      <div class="tile-wrapper">
+<div class="tree-level root">
+        <div class="tile-card locked">
+          <div class="tile-icon">
+❓
           </div>
+          <div class="tile-top-right">???</div>
+          <div class="tile-name">???</div>
+          <div class="tile-tag">未发现</div>
         </div>
       </div>
     </div>
@@ -485,7 +605,7 @@
 
   <script>
     // 简单的折叠/展开逻辑
-    document.querySelectorAll('.node-card.has-children').forEach(card => {
+    document.querySelectorAll('.tile-card.has-children').forEach(card => {
       card.addEventListener('click', function(e) {
         // 切换当前卡片的展开状态
         this.classList.toggle('expanded');
@@ -499,14 +619,8 @@
         
         let container = null;
         
-        // 情况1：根节点，children-container 是 tree-level root 的兄弟
-        if (this.parentElement.classList.contains('root')) {
-          container = this.parentElement.nextElementSibling;
-        } 
-        // 情况2：子节点（如红砖海鸥），children-container 是 node-card 父级 div 的兄弟
-        else {
-          container = this.parentElement.nextElementSibling;
-        }
+        // 新结构下：tile-card 包含在 tree-level 中，tree-level 和 children-container 同在 tile-wrapper 中
+        container = this.closest('.tile-wrapper').querySelector('.children-container');
         
         if (container && container.classList.contains('children-container')) {
           container.classList.toggle('show');
@@ -563,5 +677,8 @@
     loadCounts();
   </script>
   <div class="icp-badge"><a href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">粤ICP备2026024114号-1</a></div>
+
+</div>
+</div>
 
 </body>
