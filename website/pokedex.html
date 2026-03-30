@@ -476,8 +476,8 @@
 
   </div>
 
-  <div id="detailModal" class="detail-modal-overlay">
-    <div class="detail-modal">
+  <div id="detailModal" class="detail-modal-overlay" onclick="handleModalOverlayClick(event)">
+    <div class="detail-modal" onclick="event.stopPropagation()">
       <div class="dm-header">
         <button class="dm-close" onclick="closeDetail()">×</button>
         <div class="dm-icon" id="dmIcon"></div>
@@ -567,6 +567,13 @@
 
     function closeDetail() {
       document.getElementById('detailModal').style.display = 'none';
+    }
+
+    function handleModalOverlayClick(event) {
+      // 只有当点击的目标正是 overlay 自身时才关闭（避免点击内部弹窗时也关闭）
+      if (event.target.id === 'detailModal') {
+        closeDetail();
+      }
     }
 
     async function loadPokedex() {
