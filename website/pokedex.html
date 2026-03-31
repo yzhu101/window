@@ -324,15 +324,31 @@
       background: #fff;
       padding: 10px 12px;
       border-radius: 8px;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       font-size: 13px;
       color: #555;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
       border: 1px solid rgba(0,0,0,0.05);
     }
-    .loc-item .loc-title { font-weight: bold; color: #333; margin-bottom: 4px; }
-    .loc-item .loc-addr { color: #888; font-size: 12px; }
+    .loc-item-img {
+      width: 48px;
+      height: 48px;
+      border-radius: 6px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #eee;
+    }
+    .loc-item-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .loc-item-info .loc-title { font-weight: bold; color: #333; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .loc-item-info .loc-addr { color: #888; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* 可折叠/展开的交互样式 */
     .tile-card.has-children {
@@ -495,6 +511,59 @@
 
     const API_BASE = window.API_BASE || '';
     
+                function mapCategory(cat) {
+            if (!cat) return '';
+            if (cat.includes('基础') || cat === '原型') return '原型';
+            if (cat.includes('衍生') || cat === '结构') return '结构';
+            return cat;
+        }
+
+    function openModal(item) {
+      document.getElementById('modalIcon').src = item.icon || '';
+      document.getElementById('modalTitle').innerText = item.name || '未知';
+      document.getElementById('modalNo').innerText = 'No.' + (item.id || '');
+      document.getElementById('modalCat').innerText = mapCategory(item.category) || '未分类';
+      document.getElementById('modalDesc').innerText = item.description || '暂无描述';
+      
+      // Filter locations
+      const works = window.pokedexWorks || [];
+      const relatedWorks = works.filter(w => w.pokedexId === item.id && w.status === 'approved');
+      
+      const locContainer = document.getElementById('modalLocations');
+      if (relatedWorks.length === 0) {
+        locContainer.innerHTML = '<div style="color:#888; font-size:13px; padding:10px 0;">暂未在地图上发现记录</div>';
+      } else {
+        let locHtml = '';
+        relatedWorks.forEach(w => {
+          const title = w.title || '无名地点';
+          const addr = (w.location && w.location.address) ? w.location.address : '未知地址';
+          const imgUrl = (w.images && w.images.length > 0) ? w.images[0] : '';
+          
+          let imgHtml = '';
+          if (imgUrl) {
+              imgHtml = `<img class="loc-item-img" src="${imgUrl}" alt="现场照片" onerror="this.style.display='none'">`;
+          } else {
+              imgHtml = `<div class="loc-item-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#aaa;">暂无照片</div>`;
+          }
+          
+          locHtml += `<div class="loc-item">
+            ${imgHtml}
+            <div class="loc-item-info">
+              <div class="loc-title">${title}</div>
+              <div class="loc-addr">${addr}</div>
+            </div>
+          </div>`;
+        });
+        locContainer.innerHTML = locHtml;
+      }
+      
+      console.log('Opening modal for', item.name); document.getElementById('pokedexModal').classList.add('show');
+    }
+
+    function closeModal() {
+      document.getElementById('pokedexModal').classList.remove('show');
+    }
+
     async function loadPokedex() {
       try {
         // Fetch config
@@ -526,6 +595,7 @@
         // Build map: parentId -> children
         window.pokedexItemMap = {};
         items.forEach(item => window.pokedexItemMap[item.id] = item);
+        console.log("pokedexItemMap populated, size:", Object.keys(window.pokedexItemMap).length);
         const childrenMap = {};
         const roots = [];
         
@@ -555,12 +625,7 @@
         
         
 
-        function mapCategory(cat) {
-            if (!cat) return '';
-            if (cat.includes('基础') || cat === '原型') return '原型';
-            if (cat.includes('衍生') || cat === '结构') return '结构';
-            return cat;
-        }
+
 
         let html = '';
         
@@ -683,76 +748,45 @@
     }
 
 
-    function openModal(item) {
-      document.getElementById('modalIcon').src = item.icon || '';
-      document.getElementById('modalTitle').innerText = item.name || '未知';
-      document.getElementById('modalNo').innerText = 'No.' + (item.id || '');
-      document.getElementById('modalCat').innerText = mapCategory(item.category) || '未分类';
-      document.getElementById('modalDesc').innerText = item.description || '暂无描述';
-      
-      // Filter locations
-      const works = window.pokedexWorks || [];
-      const relatedWorks = works.filter(w => w.pokedexId === item.id && w.status === 'approved');
-      
-      const locContainer = document.getElementById('modalLocations');
-      if (relatedWorks.length === 0) {
-        locContainer.innerHTML = '<div style="color:#888; font-size:13px; padding:10px 0;">暂未在地图上发现记录</div>';
-      } else {
-        let locHtml = '';
-        relatedWorks.forEach(w => {
-          const title = w.title || '无名地点';
-          const addr = (w.location && w.location.address) ? w.location.address : '未知地址';
-          locHtml += `<div class="loc-item">
-            <div class="loc-title">${title}</div>
-            <div class="loc-addr">${addr}</div>
-          </div>`;
-        });
-        locContainer.innerHTML = locHtml;
-      }
-      
-      console.log('Opening modal for', item.name); document.getElementById('pokedexModal').classList.add('show');
-    }
 
-    function closeModal() {
-      document.getElementById('pokedexModal').classList.remove('show');
-    }
     
 
 
 
-    // 全局事件代理：处理图鉴卡片点击和展开按钮点击
-    document.addEventListener('DOMContentLoaded', () => {
-      document.body.addEventListener('click', function(e) {
-        // 1. 处理展开按钮
-        if (e.target.classList.contains('expand-btn')) {
-          e.stopPropagation();
-          let card = e.target.closest('.tile-card');
-          if (card) card.classList.toggle('expanded');
-          
-          let wrapper = e.target.closest('.tile-wrapper');
-          let container = wrapper ? wrapper.querySelector('.children-container') : null;
-          if (container) {
-            container.classList.toggle('show');
-          }
-          return;
-        }
         
-        // 2. 处理卡片点击（打开弹窗）
+    // 全局事件代理：处理图鉴卡片点击和展开按钮点击
+    document.body.addEventListener('click', function(e) {
+      // 1. 处理展开按钮
+      if (e.target.classList.contains('expand-btn')) {
+        e.stopPropagation();
         let card = e.target.closest('.tile-card');
-        if (card && !e.target.closest('.map-btn')) {
-          if (card.classList.contains('locked')) return;
-          
-          const itemId = card.getAttribute('data-id');
-          if (!itemId || !window.pokedexItemMap) return;
-          
-          const item = window.pokedexItemMap[itemId];
-          if (item) {
-              openModal(item);
-          }
+        if (card) card.classList.toggle('expanded');
+        
+        let wrapper = e.target.closest('.tile-wrapper');
+        let container = wrapper ? wrapper.querySelector('.children-container') : null;
+        if (container) {
+          container.classList.toggle('show');
         }
-      });
+        return;
+      }
       
-      // 弹窗遮罩层点击关闭
+      // 2. 处理卡片点击（打开弹窗）
+      let card = e.target.closest('.tile-card');
+      if (card && !e.target.closest('.map-btn')) {
+        if (card.classList.contains('locked')) return;
+        
+        const itemId = card.getAttribute('data-id');
+        if (!itemId || !window.pokedexItemMap) return;
+        
+        const item = window.pokedexItemMap[itemId];
+        if (item) {
+            openModal(item);
+        }
+      }
+    });
+    
+    // 弹窗遮罩层点击关闭
+    document.addEventListener('DOMContentLoaded', () => {
       const overlay = document.getElementById('pokedexModal');
       if(overlay) {
         overlay.addEventListener('click', (e) => {
@@ -760,6 +794,7 @@
         });
       }
     });
+
 
     loadPokedex();
   </script>
