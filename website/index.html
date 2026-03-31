@@ -545,18 +545,19 @@
         tourProgress.textContent = `(${currentTourIndex + 1}/${validWorks.length})`;
       }
       
-      map.flyTo([item.lat, item.lng], 16, {
-        duration: 1.5
+      // 漫游时直接缩放到 18 级（足够近，避免被聚合导致弹窗消失）
+      map.flyTo([item.lat, item.lng], 18, {
+        duration: 1.2
       });
       
       // 添加安全超时，防止 moveend 事件未触发导致卡死
       const safetyTimeout = setTimeout(() => {
         isAnimating = false;
-        // 展开聚合（如果 marker 在聚合内）然后打开 popup
+        // 确保它被展示并打开气泡
         markerClusterGroup.zoomToShowLayer(item.marker, () => {
           item.marker.openPopup();
         });
-      }, 2000);
+      }, 1300);
       
       map.once('moveend', () => {
         clearTimeout(safetyTimeout);
