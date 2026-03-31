@@ -438,6 +438,12 @@
           map.scrollWheelZoom.disable();
           tourIndicator.style.display = 'flex';
           
+          // 进入漫游模式：取消聚合，单独显示所有标记
+          if (typeof markerClusterGroup !== 'undefined') {
+              map.removeLayer(markerClusterGroup);
+              validWorks.forEach(w => map.addLayer(w.marker));
+          }
+          
           currentTourIndex = 0;
           flyToCurrentWork();
         } else {
@@ -447,6 +453,12 @@
           map.scrollWheelZoom.enable();
           map.closePopup();
           tourIndicator.style.display = 'none';
+          
+          // 退出漫游模式：恢复聚合
+          if (typeof markerClusterGroup !== 'undefined') {
+              validWorks.forEach(w => map.removeLayer(w.marker));
+              map.addLayer(markerClusterGroup);
+          }
         }
       });
     }
@@ -465,6 +477,12 @@
         map.scrollWheelZoom.enable();
         map.closePopup();
         if (tourIndicator) tourIndicator.style.display = 'none';
+        
+        // 退出漫游模式：恢复聚合
+        if (typeof markerClusterGroup !== 'undefined') {
+            validWorks.forEach(w => map.removeLayer(w.marker));
+            map.addLayer(markerClusterGroup);
+        }
       }
     });
 
@@ -545,7 +563,7 @@
         tourProgress.textContent = `(${currentTourIndex + 1}/${validWorks.length})`;
       }
       
-      // 漫游时直接缩放到 18 级（足够近，避免被聚合导致弹窗消失）
+      // 漫游时缩放级别保持或设置到合适大小
       map.flyTo([item.lat, item.lng], 18, {
         duration: 1.2
       });
@@ -553,18 +571,26 @@
       // 添加安全超时，防止 moveend 事件未触发导致卡死
       const safetyTimeout = setTimeout(() => {
         isAnimating = false;
-        // 确保它被展示并打开气泡
-        markerClusterGroup.zoomToShowLayer(item.marker, () => {
+        // 漫游模式下聚合已取消，直接打开气泡
+        if (tourMode) {
           item.marker.openPopup();
-        });
+        } else {
+          markerClusterGroup.zoomToShowLayer(item.marker, () => {
+            item.marker.openPopup();
+          });
+        }
       }, 1300);
       
       map.once('moveend', () => {
         clearTimeout(safetyTimeout);
-        // 确保动画结束后，聚合点会展开并显示弹窗
-        markerClusterGroup.zoomToShowLayer(item.marker, () => {
+        // 漫游模式下聚合已取消，直接打开气泡
+        if (tourMode) {
           item.marker.openPopup();
-        });
+        } else {
+          markerClusterGroup.zoomToShowLayer(item.marker, () => {
+            item.marker.openPopup();
+          });
+        }
         setTimeout(() => {
           isAnimating = false;
         }, 300); // 留出一点缓冲时间
