@@ -91,21 +91,61 @@
       width: 144px; /* 120px + 24px偏移量 */
     }
 
+    
+    /* ---------------------------------------------------- */
+    /* 子卡片容器：双向手风琴平滑动画（垂直展开/收起） */
+    /* ---------------------------------------------------- */
+    .children-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-left: 0;
+      position: relative;
+      align-items: flex-start;
+      
+      /* 收起时的隐藏状态 */
+      max-height: 0;
+      opacity: 0;
+      margin-top: 0;
+      overflow: hidden;
+      
+      /* 关键：垂直方向和透明度的平滑过渡，实现手风琴的展开与收起 */
+      transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                  opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                  margin-top 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    /* 展开状态 */
+    .children-container.show {
+      max-height: 2000px; /* 足够容纳所有子卡片的最大高度 */
+      opacity: 1;
+      margin-top: 16px;
+    }
+
+    /* 垂直贯穿的树干线 */
+    .children-container::before {
+      content: '';
+      position: absolute;
+      left: 60px; /* 精准对齐父卡片(120px)的中心点 */
+      top: -16px;
+      bottom: 20px; /* 底部留出空隙，不穿透最后一张卡片 */
+      width: 2px;
+      background: rgba(94, 54, 67, 0.2);
+      transform: translateX(-50%);
+      z-index: -1;
+    }
+    
+    /* 让子卡片整体向右偏移一点点，与树干拉开距离 */
+    .children-container .tree-level {
+      margin-left: 24px;
+    }
+
     /* 调整连接线：隐藏原有的树状连接线 */
     .tree-connector {
       display: none;
     }
     
-    .children-container {
-      display: none;
-      flex-direction: column;
-      gap: 16px;
-      margin-top: 16px;
-      margin-left: 0;
-      position: relative;
-      animation: slideDown 0.3s ease-out;
-      align-items: flex-start;
-    }
+    
     
     /* 让子卡片整体向右偏移一点点，与树干拉开距离 */
     .children-container .tree-level {
@@ -113,23 +153,10 @@
     }
     
     /* 垂直贯穿线居中，因为子卡片右移了，线和卡片就会拉开距离 */
-    .children-container::before {
-      content: '';
-      position: absolute;
-      left: 60px; /* 对齐父卡片(120px)的中心点 */
-      top: -16px;
-      bottom: 20px;
-      width: 2px;
-      background: rgba(94, 54, 67, 0.2);
-      transform: translateX(-50%);
-      z-index: -1;
-    }
+    
     
     /* 为了显示，覆盖原来的 .children-container.show */
-    .children-container.show {
-      display: flex !important;
-      margin-bottom: 0;
-    }
+    
 
     .family-section { margin-bottom: 50px; }
     .family-header { margin-bottom: 24px; border-left: 4px solid #5e3643; padding-left: 12px; }
@@ -373,21 +400,10 @@
     
     
 
-    /* 默认隐藏子节点容器 */
-    .children-container {
-      display: none;
-      flex-direction: column;
-      gap: 16px;
-      margin-left: 24px;
-      margin-top: 16px;
-      margin-bottom: 0;
-      position: relative;
-      /* 简单的展开动画 */
-      animation: slideDown 0.3s ease-out;
-    }
     
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-10px); }
+    
+    
+    
       to { opacity: 1; transform: translateY(0); }
     }
     
@@ -395,15 +411,7 @@
     
     
     /* 垂直贯穿线 */
-    .children-container::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: -10px;
-      bottom: 20px; /* 不到底，留出最后一个弯 */
-      width: 2px;
-      background: #ccc;
-    }
+    
 
     /* 待解锁 */
     .tile-card.locked { opacity: 0.6; filter: grayscale(1); border-style: dashed; }
