@@ -79,8 +79,16 @@
     .tile-wrapper {
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: flex-start;
       position: relative;
+      /* 初始宽度为父卡片宽度，添加过渡动画 */
+      width: 120px;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    /* 展开时，宽度变宽以容纳子卡片的右移，从而平滑挤开右侧相邻的卡片 */
+    .tile-wrapper.expanded {
+      width: 144px; /* 120px + 24px偏移量 */
     }
 
     /* 调整连接线：隐藏原有的树状连接线 */
@@ -96,21 +104,21 @@
       margin-left: 0;
       position: relative;
       animation: slideDown 0.3s ease-out;
-      align-items: center;
+      align-items: flex-start;
     }
     
     /* 让子卡片整体向右偏移一点点，与树干拉开距离 */
     .children-container .tree-level {
-      transform: translateX(24px);
+      margin-left: 24px;
     }
     
     /* 垂直贯穿线居中，因为子卡片右移了，线和卡片就会拉开距离 */
     .children-container::before {
       content: '';
       position: absolute;
-      left: 50%;
+      left: 60px; /* 对齐父卡片(120px)的中心点 */
       top: -16px;
-      bottom: 20px; /* 底部留一点空隙，不穿透最后一张卡片 */
+      bottom: 20px;
       width: 2px;
       background: rgba(94, 54, 67, 0.2);
       transform: translateX(-50%);
@@ -763,6 +771,8 @@
         if (card) card.classList.toggle('expanded');
         
         let wrapper = e.target.closest('.tile-wrapper');
+        if (wrapper) wrapper.classList.toggle('expanded');
+        
         let container = wrapper ? wrapper.querySelector('.children-container') : null;
         if (container) {
           container.classList.toggle('show');
