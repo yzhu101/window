@@ -444,7 +444,10 @@
               validWorks.forEach(w => map.addLayer(w.marker));
           }
           
-          currentTourIndex = 0;
+          // 不再重置 currentTourIndex 为 0，保持当前用户点击的索引或上一次的索引
+          if (currentTourIndex < 0 || currentTourIndex >= validWorks.length) {
+              currentTourIndex = 0;
+          }
           flyToCurrentWork();
         } else {
           tourBtnText.textContent = '漫游';
@@ -718,13 +721,11 @@
             }, 500);
           }
 
-          // 在漫游模式下，如果用户手动点击了其他花格，则将漫游进度同步到该花格
+          // 无论是否在漫游模式下，用户手动点击花格，都记录为当前的索引
           marker.on('click', () => {
-            if (tourMode) {
-              currentTourIndex = myIndex;
-              if (tourProgress) {
-                tourProgress.textContent = `(${currentTourIndex + 1}/${validWorks.length})`;
-              }
+            currentTourIndex = myIndex;
+            if (tourMode && tourProgress) {
+              tourProgress.textContent = `(${currentTourIndex + 1}/${validWorks.length})`;
             }
           });
         }
