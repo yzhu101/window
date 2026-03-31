@@ -230,9 +230,9 @@
       margin-right: 3px;
       /* 移除边框和阴影，追求极简 */
     }
-    .legend-dot.normal { background: #627F8D; }
-    .legend-dot.rare { background: #DDA24A; }
-    .legend-dot.very-rare { background: #C95F53; }
+    .legend-dot.normal { background: #D9CFCB; } /* 更浅的浅灰褐 */
+    .legend-dot.rare { background: #A67C80; }   /* 中度红褐，提升一点纯度 */
+    .legend-dot.very-rare { background: #4A2631; } /* 更深的暗酒红 */
 
     .corner-logo {
       position: fixed;
@@ -571,9 +571,9 @@
     }
 
     const createIcon = (rarity) => {
-      let bgColor = '#627F8D'; // 默认/普通
-      if (rarity === '非常稀有') bgColor = '#C95F53';
-      else if (rarity === '稀有') bgColor = '#DDA24A';
+      let bgColor = '#D9CFCB'; // 默认/普通：更浅的浅灰褐
+      if (rarity === '非常稀有') bgColor = '#4A2631'; // 非常稀有：更深的暗酒红
+      else if (rarity === '稀有') bgColor = '#A67C80'; // 稀有：中度红褐
       
       return L.divIcon({
         className: 'custom-marker',
