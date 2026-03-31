@@ -563,8 +563,14 @@
         tourProgress.textContent = `(${currentTourIndex + 1}/${validWorks.length})`;
       }
       
-      // 漫游时缩放级别保持或设置到合适大小
-      map.flyTo([item.lat, item.lng], 18, {
+      // 漫游时计算偏移，使标记在屏幕上居中偏下，留出上方空间显示完整的卡片弹窗
+      const targetZoom = 18;
+      const targetPoint = map.project([item.lat, item.lng], targetZoom);
+      // 减去一定像素值（地图中心向北移，标记在屏幕上会偏下）
+      targetPoint.y -= 100; 
+      const targetLatLng = map.unproject(targetPoint, targetZoom);
+      
+      map.flyTo(targetLatLng, targetZoom, {
         duration: 1.2
       });
       
