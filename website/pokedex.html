@@ -98,13 +98,18 @@
       align-items: center;
     }
     
-    /* 垂直贯穿线居中 */
+    /* 让子卡片整体向右偏移一点点，与树干拉开距离 */
+    .children-container .tree-level {
+      transform: translateX(24px);
+    }
+    
+    /* 垂直贯穿线居中，因为子卡片右移了，线和卡片就会拉开距离 */
     .children-container::before {
       content: '';
       position: absolute;
       left: 50%;
       top: -16px;
-      bottom: 0;
+      bottom: 20px; /* 底部留一点空隙，不穿透最后一张卡片 */
       width: 2px;
       background: rgba(94, 54, 67, 0.2);
       transform: translateX(-50%);
@@ -113,7 +118,7 @@
     
     /* 为了显示，覆盖原来的 .children-container.show */
     .children-container.show {
-      display: flex;
+      display: flex !important;
       margin-bottom: 0;
     }
 
@@ -156,7 +161,7 @@
     
     /* 节点卡片 */
     .tile-card {
-      min-width: 140px;
+      width: 160px; min-width: 160px;
       height: 160px;
       background: #F4F0E8;
       border: 1px solid rgba(255, 255, 255, 0.4);
@@ -195,10 +200,13 @@
     .tile-top-right {
       position: absolute;
       top: 16px;
-      right: 16px;
+      right: 12px;
       color: #767676;
       font-size: 10px;
       font-weight: 500;
+      /* Add left-padding so it never touches the icon */
+      width: calc(100% - 90px);
+      text-align: right;
     }
 
     .tile-name { 
@@ -267,10 +275,7 @@
     }
     
     /* 激活显示 */
-    .children-container.show {
-      display: flex;
-      margin-bottom: 14px; /* 展开时与下一个根节点保持 14px 间距 */
-    }
+    
     
     /* 垂直贯穿线 */
     .children-container::before {
@@ -453,6 +458,15 @@
           }
         });
         
+        
+
+        function mapCategory(cat) {
+            if (!cat) return '';
+            if (cat.includes('基础') || cat === '原型') return '原型';
+            if (cat.includes('衍生') || cat === '结构') return '结构';
+            return cat;
+        }
+
         let html = '';
         
         for (const typeKey of [...config.types.map(t=>t.key), 'other']) {
@@ -499,8 +513,8 @@
                       </div>
                       <div class="tile-top-right">No.${root.id}</div>
                       <div class="tile-name">${root.name}</div>
-                      <div class="tile-tag">${root.category || '未分类'}</div>
-                      <div class="map-btn" title="查看分布" data-id="${root.id}" data-name="${root.name}" data-icon="${root.icon || ''}" data-desc="${root.description || ''}" style="position: absolute; bottom: 16px; right: 16px; z-index: 10;">📍</div>
+                      <div class="tile-tag">${mapCategory(root.category) || '未分类'}</div>
+                      
                     </div>
                   </div>
               `;
@@ -517,8 +531,8 @@
                         </div>
                         <div class="tile-top-right">No.${child.id}</div>
                         <div class="tile-name">${child.name}</div>
-                        <div class="tile-tag">${child.category || '结构'}</div>
-                        <div class="map-btn" title="查看分布" data-id="${child.id}" data-name="${child.name}" data-icon="${child.icon || ''}" data-desc="${child.description || ''}" style="position: absolute; bottom: 16px; right: 16px; z-index: 10;">📍</div>
+                        <div class="tile-tag">${mapCategory(child.category) || '结构'}</div>
+                        
                       </div>
                     </div>
                   `;
@@ -557,7 +571,8 @@
             if (e.target.classList.contains('map-btn') || e.target.closest('.map-btn')) return;
             
             this.classList.toggle('expanded');
-            let container = this.closest('.tile-wrapper')?.querySelector('.children-container');
+            let wrapper = this.closest('.tile-wrapper');
+            let container = wrapper ? wrapper.querySelector('.children-container') : null;
             if (container) {
               container.classList.toggle('show');
             }
