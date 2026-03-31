@@ -65,6 +65,7 @@
       flex-direction: row;
       gap: 32px;
       overflow-x: auto;
+      padding-top: 10px;
       padding-bottom: 24px;
       align-items: flex-start;
       /* 隐藏滚动条 */
@@ -161,12 +162,12 @@
     
     /* 节点卡片 */
     .tile-card {
-      width: 160px; min-width: 160px;
-      height: 160px;
+      width: 120px; min-width: 120px;
+      height: 120px;
       background: #F4F0E8;
       border: 1px solid rgba(255, 255, 255, 0.4);
       border-radius: 20px;
-      padding: 16px 16px 20px 16px;
+      padding: 10px 10px 14px 10px;
       display: flex;
       flex-direction: column;
       position: relative;
@@ -181,8 +182,8 @@
     }
 
     .tile-icon {
-      width: 60px;
-      height: 60px;
+      width: 44px;
+      height: 44px;
       background: #5e3643;
       border-radius: 14px;
       display: flex;
@@ -199,21 +200,20 @@
     
     .tile-top-right {
       position: absolute;
-      top: 16px;
-      right: 12px;
+      top: 10px;
+      right: 8px;
       color: #767676;
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 500;
-      /* Add left-padding so it never touches the icon */
-      width: calc(100% - 90px);
+      width: calc(100% - 64px);
       text-align: right;
     }
 
     .tile-name { 
       color: #2F2F2F;
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 600;
-      margin-top: 12px;
+      margin-top: 8px;
     }
     
     .tile-tag { 
@@ -222,27 +222,124 @@
       margin-top: 2px;
     }
 
+    
+    /* 展开按钮样式优化 */
+    .expand-btn {
+      position: absolute;
+      right: -8px;
+      bottom: -8px;
+      width: 28px;
+      height: 28px;
+      background: #5e3643;
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(94, 54, 67, 0.3);
+      transition: all 0.2s;
+      z-index: 10;
+    }
+    .expand-btn:hover {
+      transform: scale(1.1);
+      background: #7a4858;
+    }
+    .tile-card.expanded .expand-btn {
+      transform: rotate(45deg);
+      background: #888;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* 详情弹窗样式 */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .modal-overlay.show {
+      display: flex;
+      opacity: 1;
+    }
+    .modal-content {
+      background: #F4F0E8;
+      width: 90%;
+      max-width: 400px;
+      border-radius: 20px;
+      padding: 24px;
+      position: relative;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      transform: translateY(20px);
+      transition: transform 0.3s;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal-overlay.show .modal-content {
+      transform: translateY(0);
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      font-size: 24px;
+      color: #888;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .modal-icon {
+      width: 64px; height: 64px;
+      background: #5e3643;
+      border-radius: 14px;
+      padding: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-icon img { width: 100%; height: 100%; object-fit: contain; }
+    .modal-title { font-size: 20px; font-weight: bold; color: #2F2F2F; margin-bottom: 4px; }
+    .modal-tags { display: flex; gap: 8px; font-size: 12px; color: #767676; }
+    .modal-desc { font-size: 14px; color: #555; line-height: 1.6; margin-bottom: 20px; }
+    
+    .location-list {
+      margin-top: 16px;
+    }
+    .location-list h4 {
+      font-size: 15px; color: #333; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .loc-item {
+      background: #fff;
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: #555;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+    .loc-item .loc-title { font-weight: bold; color: #333; margin-bottom: 4px; }
+    .loc-item .loc-addr { color: #888; font-size: 12px; }
+
     /* 可折叠/展开的交互样式 */
     .tile-card.has-children {
       cursor: pointer;
     }
     
-    .tile-card.has-children::after {
-      content: '+';
-      position: absolute;
-      right: 16px;
-      bottom: 16px;
-      width: 24px;
-      height: 24px;
-      background: #eee;
-      border-radius: 50%;
-      text-align: center;
-      line-height: 24px;
-      color: #666;
-      font-weight: bold;
-      font-family: monospace;
-      transition: all 0.2s;
-    }
+    
     
     /* 展开状态 */
     .tile-card.has-children.expanded {
@@ -250,11 +347,7 @@
       border-color: #5e3643;
     }
     
-    .tile-card.has-children.expanded::after {
-      content: '-';
-      background: #5e3643;
-      color: #fff;
-    }
+    
 
     /* 默认隐藏子节点容器 */
     .children-container {
@@ -431,6 +524,8 @@
         }
         
         // Build map: parentId -> children
+        window.pokedexItemMap = {};
+        items.forEach(item => window.pokedexItemMap[item.id] = item);
         const childrenMap = {};
         const roots = [];
         
@@ -507,14 +602,14 @@
               groupHtml += `
                 <div class="tile-wrapper">
                   <div class="tree-level root">
-                    <div class="tile-card ${hasChildren ? 'has-children' : ''}">
+                    <div class="tile-card ${hasChildren ? 'has-children' : ''}" style="cursor: pointer;" data-id="${root.id}"/g, "&apos;")}'>
                       <div class="tile-icon" style="background: #5e3643;">
                         <img src="${root.icon || ''}" alt="${root.name}" onerror="this.style.display='none'">
                       </div>
                       <div class="tile-top-right">No.${root.id}</div>
                       <div class="tile-name">${root.name}</div>
                       <div class="tile-tag">${mapCategory(root.category) || '未分类'}</div>
-                      
+                      ${hasChildren ? '<div class="expand-btn">+</div>' : ''}
                     </div>
                   </div>
               `;
@@ -525,7 +620,7 @@
                   groupHtml += `
                     <div class="tree-level">
                       <div class="tree-connector"></div>
-                      <div class="tile-card">
+                      <div class="tile-card" style="cursor: pointer;" data-id="${child.id}"/g, "&apos;")}'>
                         <div class="tile-icon" style="background: #5e3643;">
                           <img src="${child.icon || ''}" alt="${child.name}" onerror="this.style.display='none'">
                         </div>
@@ -564,20 +659,21 @@
         
         document.getElementById('pokedex-container').innerHTML = html;
         
-        // Re-bind click events
-        document.querySelectorAll('.tile-card.has-children').forEach(card => {
-          card.addEventListener('click', function(e) {
-            // Ignore if map-btn is clicked
-            if (e.target.classList.contains('map-btn') || e.target.closest('.map-btn')) return;
-            
-            this.classList.toggle('expanded');
-            let wrapper = this.closest('.tile-wrapper');
-            let container = wrapper ? wrapper.querySelector('.children-container') : null;
-            if (container) {
-              container.classList.toggle('show');
-            }
-          });
-        });
+        // Fetch all works for location data
+        let allWorks = [];
+        try {
+          const wRes = await fetch(`${API_BASE}/api/works`);
+          if (wRes.ok) {
+            const wJson = await wRes.json();
+            allWorks = wJson.data || [];
+          } else {
+             const wRes2 = await fetch('./data/works.json');
+             allWorks = await wRes2.json();
+          }
+        } catch(err) { console.error('加载地图数据失败', err); }
+
+        window.pokedexWorks = allWorks;
+
         
         // Bind Map BTN logic (if there is map logic)
         
@@ -586,11 +682,113 @@
       }
     }
 
+
+    function openModal(item) {
+      document.getElementById('modalIcon').src = item.icon || '';
+      document.getElementById('modalTitle').innerText = item.name || '未知';
+      document.getElementById('modalNo').innerText = 'No.' + (item.id || '');
+      document.getElementById('modalCat').innerText = mapCategory(item.category) || '未分类';
+      document.getElementById('modalDesc').innerText = item.description || '暂无描述';
+      
+      // Filter locations
+      const works = window.pokedexWorks || [];
+      const relatedWorks = works.filter(w => w.pokedexId === item.id && w.status === 'approved');
+      
+      const locContainer = document.getElementById('modalLocations');
+      if (relatedWorks.length === 0) {
+        locContainer.innerHTML = '<div style="color:#888; font-size:13px; padding:10px 0;">暂未在地图上发现记录</div>';
+      } else {
+        let locHtml = '';
+        relatedWorks.forEach(w => {
+          const title = w.title || '无名地点';
+          const addr = (w.location && w.location.address) ? w.location.address : '未知地址';
+          locHtml += `<div class="loc-item">
+            <div class="loc-title">${title}</div>
+            <div class="loc-addr">${addr}</div>
+          </div>`;
+        });
+        locContainer.innerHTML = locHtml;
+      }
+      
+      console.log('Opening modal for', item.name); document.getElementById('pokedexModal').classList.add('show');
+    }
+
+    function closeModal() {
+      document.getElementById('pokedexModal').classList.remove('show');
+    }
+    
+
+
+
+    // 全局事件代理：处理图鉴卡片点击和展开按钮点击
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.addEventListener('click', function(e) {
+        // 1. 处理展开按钮
+        if (e.target.classList.contains('expand-btn')) {
+          e.stopPropagation();
+          let card = e.target.closest('.tile-card');
+          if (card) card.classList.toggle('expanded');
+          
+          let wrapper = e.target.closest('.tile-wrapper');
+          let container = wrapper ? wrapper.querySelector('.children-container') : null;
+          if (container) {
+            container.classList.toggle('show');
+          }
+          return;
+        }
+        
+        // 2. 处理卡片点击（打开弹窗）
+        let card = e.target.closest('.tile-card');
+        if (card && !e.target.closest('.map-btn')) {
+          if (card.classList.contains('locked')) return;
+          
+          const itemId = card.getAttribute('data-id');
+          if (!itemId || !window.pokedexItemMap) return;
+          
+          const item = window.pokedexItemMap[itemId];
+          if (item) {
+              openModal(item);
+          }
+        }
+      });
+      
+      // 弹窗遮罩层点击关闭
+      const overlay = document.getElementById('pokedexModal');
+      if(overlay) {
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) closeModal();
+        });
+      }
+    });
+
     loadPokedex();
   </script>
   <div class="icp-badge"><a href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">粤ICP备2026024114号-1</a></div>
 
 </div>
 </div>
+
+
+  <!-- 图鉴详情弹窗 -->
+  <div class="modal-overlay" id="pokedexModal">
+    <div class="modal-content">
+      <div class="modal-close" onclick="closeModal()">×</div>
+      <div class="modal-header">
+        <div class="modal-icon"><img id="modalIcon" src="" alt=""></div>
+        <div>
+          <div class="modal-title" id="modalTitle">标题</div>
+          <div class="modal-tags">
+            <span id="modalNo">No.000</span>
+            <span id="modalCat">类别</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-desc" id="modalDesc">描述文本</div>
+      <div class="location-list">
+        <h4>📍 发现地点</h4>
+        <div id="modalLocations">加载中...</div>
+      </div>
+    </div>
+  </div>
 
 </body>
