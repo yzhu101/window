@@ -414,7 +414,9 @@
     
 
     /* 待解锁 */
-    .tile-card.locked { opacity: 0.6; filter: grayscale(1); border-style: dashed; }
+    .tile-card.locked { opacity: 0.8; border: 1px solid #e0e0e0; background: #faf8f5; box-shadow: none; }
+    .tile-card.locked .tile-icon { background: transparent; border: 2px dashed #ccc; color: #aaa; font-size: 24px; display: flex; align-items: center; justify-content: center; }
+    .tile-card.locked .tile-top-right, .tile-card.locked .tile-name, .tile-card.locked .tile-tag { color: #999; }
     
     .upload-cta {
       margin-top: 40px;
@@ -664,7 +666,7 @@
               <div class="tile-wrapper">
                 <div class="tree-level root">
                   <div class="tile-card locked">
-                    <div class="tile-icon">❓</div>
+                    <div class="tile-icon">?</div>
                     <div class="tile-top-right">???</div>
                     <div class="tile-name">???</div>
                     <div class="tile-tag">未发现</div>
@@ -689,7 +691,7 @@
                       </div>
                       <div class="tile-top-right">No.${root.id}</div>
                       <div class="tile-name">${root.name}</div>
-                      <div class="tile-tag">${mapCategory(root.category) || '未分类'}</div>
+                      <div class="tile-tag">${mapCategory(root.category) || '未分类'}${hasChildren ? `<span style="margin-left: 4px; opacity: 0.8;">· ${children.length} 个变体</span>` : ''}</div>
                       ${hasChildren ? '<div class="expand-btn">+</div>' : ''}
                     </div>
                   </div>
@@ -719,7 +721,7 @@
                   <div class="tree-level">
                     <div class="tree-connector"></div>
                     <div class="tile-card locked">
-                      <div class="tile-icon">❓</div>
+                      <div class="tile-icon">?</div>
                       <div class="tile-top-right">???</div>
                       <div class="tile-name">???</div>
                       <div class="tile-tag">未发现</div>
