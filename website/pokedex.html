@@ -375,6 +375,11 @@
       object-fit: cover;
       flex-shrink: 0;
       background: #eee;
+      cursor: zoom-in;
+      transition: transform 0.2s;
+    }
+    .loc-item-img:hover {
+      transform: scale(1.05);
     }
     .loc-item-info {
       flex: 1;
@@ -417,6 +422,39 @@
     .tile-card.locked { opacity: 0.8; border: 1px solid #e0e0e0; background: #faf8f5; box-shadow: none; }
     .tile-card.locked .tile-icon { background: transparent; border: 2px dashed #ccc; color: #aaa; font-size: 24px; display: flex; align-items: center; justify-content: center; }
     .tile-card.locked .tile-top-right, .tile-card.locked .tile-name, .tile-card.locked .tile-tag { color: #999; }
+    
+    /* 全屏图片查看器 */
+    .image-viewer-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 3000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      cursor: zoom-out;
+    }
+    .image-viewer-overlay.show {
+      display: flex;
+      opacity: 1;
+    }
+    .image-viewer-img {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      object-fit: contain;
+      transform: scale(0.9);
+      transition: transform 0.3s ease;
+    }
+    .image-viewer-overlay.show .image-viewer-img {
+      transform: scale(1);
+    }
     
     .upload-cta {
       margin-top: 40px;
@@ -559,7 +597,7 @@
           
           let imgHtml = '';
           if (imgUrl) {
-              imgHtml = `<img class="loc-item-img" src="${imgUrl}" alt="现场照片" onerror="this.style.display='none'">`;
+              imgHtml = `<img class="loc-item-img" src="${imgUrl}" alt="现场照片" onerror="this.style.display='none'" onclick="openImageViewer('${imgUrl}')" title="点击放大查看">`;
           } else {
               imgHtml = `<div class="loc-item-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#aaa;">暂无照片</div>`;
           }
@@ -815,6 +853,29 @@
       }
     });
 
+    // 全屏图片查看器逻辑
+    function openImageViewer(src) {
+      const viewer = document.getElementById('imageViewer');
+      const viewerImg = document.getElementById('viewerImg');
+      if (viewer && viewerImg && src) {
+        viewerImg.src = src;
+        viewer.style.display = 'flex';
+        // 触发重绘以应用过渡动画
+        void viewer.offsetWidth;
+        viewer.classList.add('show');
+      }
+    }
+
+    function closeImageViewer() {
+      const viewer = document.getElementById('imageViewer');
+      if (viewer) {
+        viewer.classList.remove('show');
+        setTimeout(() => {
+          viewer.style.display = 'none';
+          document.getElementById('viewerImg').src = '';
+        }, 300);
+      }
+    }
 
     loadPokedex();
   </script>
@@ -844,6 +905,11 @@
         <div id="modalLocations">加载中...</div>
       </div>
     </div>
+  </div>
+
+  <!-- 全屏图片查看器 -->
+  <div class="image-viewer-overlay" id="imageViewer" onclick="closeImageViewer()">
+    <img class="image-viewer-img" id="viewerImg" src="" alt="查看大图">
   </div>
 
 </body>
