@@ -91,6 +91,10 @@
       width: 144px; /* 120px + 24px偏移量 */
     }
 
+    .tile-wrapper.many.expanded {
+      width: 288px;
+    }
+
     
     /* ---------------------------------------------------- */
     /* 子卡片容器：双向手风琴平滑动画（垂直展开/收起） */
@@ -120,6 +124,57 @@
       max-height: 2000px; /* 足够容纳所有子卡片的最大高度 */
       opacity: 1;
       margin-top: 16px;
+    }
+
+    .children-container.many {
+      display: grid;
+      grid-template-columns: repeat(2, 120px);
+      gap: 12px;
+      align-items: start;
+      padding-left: 0;
+    }
+
+    .children-container.many::before {
+      display: none;
+    }
+
+    .children-container.many .many-chain {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: visible;
+    }
+
+    .children-container.many .tree-level {
+      position: relative;
+      z-index: 1;
+    }
+
+    .children-container.many .tree-level {
+      margin-left: 0;
+    }
+
+    .children-container.show.many {
+      max-height: 340px;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+
+    .children-container.show.many::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .children-container.show.many::-webkit-scrollbar-thumb {
+      background: rgba(94, 54, 67, 0.25);
+      border-radius: 10px;
+    }
+
+    .children-container.show.many::-webkit-scrollbar-track {
+      background: transparent;
     }
 
     /* 垂直贯穿的树干线 */
@@ -409,8 +464,7 @@
     
     
     
-      to { opacity: 1; transform: translateY(0); }
-    }
+
     
     /* 激活显示 */
     
@@ -719,9 +773,10 @@
               const children = childrenMap[root.id] || [];
               children.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
               const hasChildren = children.length > 0;
+              const isManyChildren = children.length >= 6;
               
               groupHtml += `
-                <div class="tile-wrapper">
+                <div class="tile-wrapper${isManyChildren ? ' many' : ''}">
                   <div class="tree-level root">
                     <div class="tile-card ${hasChildren ? 'has-children' : ''}" style="cursor: pointer;" data-id="${root.id}"/g, "&apos;")}'>
                       <div class="tile-icon" style="background: #5e3643;">
@@ -736,7 +791,7 @@
               `;
               
               if (hasChildren) {
-                groupHtml += `<div class="children-container">`;
+                groupHtml += `<div class="children-container${isManyChildren ? ' many' : ''}">${isManyChildren ? '<svg class="many-chain" aria-hidden="true"></svg>' : ''}`;
                 children.forEach(child => {
                   groupHtml += `
                     <div class="tree-level">
@@ -824,6 +879,15 @@
         let container = wrapper ? wrapper.querySelector('.children-container') : null;
         if (container) {
           container.classList.toggle('show');
+
+          if (container.classList.contains('many') && container.classList.contains('show')) {
+            requestAnimationFrame(() => {
+              drawManyChain(wrapper, container);
+            });
+          } else if (container.classList.contains('many')) {
+            const svg = container.querySelector('.many-chain');
+            if (svg) svg.innerHTML = '';
+          }
         }
         return;
       }
@@ -875,6 +939,52 @@
           document.getElementById('viewerImg').src = '';
         }, 300);
       }
+    }
+
+    function drawManyChain(wrapper, container) {
+      if (!wrapper || !container) return;
+      const svg = container.querySelector('.many-chain');
+      if (!svg) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const parentCard = wrapper.querySelector('.tree-level.root .tile-card');
+      if (!parentCard) return;
+
+      const parentRect = parentCard.getBoundingClientRect();
+      const startX = parentRect.left - containerRect.left + parentRect.width / 2;
+      const startY = parentRect.bottom - containerRect.top + 8;
+
+      const childCards = Array.from(container.querySelectorAll('.tree-level .tile-card'))
+        .filter(el => !el.classList.contains('locked'));
+
+      const points = childCards.map(card => {
+        const r = card.getBoundingClientRect();
+        return {
+          x: r.left - containerRect.left + r.width / 2,
+          y: r.top - containerRect.top + r.height / 2
+        };
+      });
+
+      const width = container.clientWidth;
+      const height = container.scrollHeight;
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      svg.setAttribute('width', `${width}`);
+      svg.setAttribute('height', `${height}`);
+      svg.style.height = `${height}px`;
+
+      if (points.length === 0) {
+        svg.innerHTML = '';
+        return;
+      }
+
+      let d = `M ${startX.toFixed(2)} ${startY.toFixed(2)}`;
+      points.forEach(p => {
+        d += ` L ${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
+      });
+
+      svg.innerHTML = `
+        <path d="${d}" fill="none" stroke="rgba(94, 54, 67, 0.22)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      `;
     }
 
     loadPokedex();
