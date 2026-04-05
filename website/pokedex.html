@@ -850,6 +850,20 @@
 
         window.pokedexWorks = allWorks;
 
+        const urlParams = new URLSearchParams(window.location.search);
+        const openId = urlParams.get('id');
+        if (openId && window.pokedexItemMap && window.pokedexItemMap[openId]) {
+          const item = window.pokedexItemMap[openId];
+          openModal(item);
+          const safeId = (window.CSS && typeof window.CSS.escape === 'function')
+            ? window.CSS.escape(openId)
+            : openId.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+          const card = document.querySelector(`.tile-card[data-id="${safeId}"]`);
+          if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+          }
+        }
+        
         
         // Bind Map BTN logic (if there is map logic)
         

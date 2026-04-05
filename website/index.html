@@ -230,9 +230,183 @@
       margin-right: 3px;
       /* 移除边框和阴影，追求极简 */
     }
-    .legend-dot.normal { background: #D9CFCB; } /* 更浅的浅灰褐 */
-    .legend-dot.rare { background: #A67C80; }   /* 中度红褐，提升一点纯度 */
-    .legend-dot.very-rare { background: #4A2631; } /* 更深的暗酒红 */
+    .legend-dot.normal { background: #D9CFCB; }
+    .legend-dot.rare { background: #A67C80; }
+    .legend-dot.very-rare { background: #4A2631; }
+
+    .updates-dot {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4A2631;
+      border: 2px solid #fff;
+      display: none;
+    }
+
+    .updates-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 2000;
+      padding: 12px;
+    }
+    .updates-overlay.show { display: flex; }
+    .updates-panel {
+      width: min(520px, 100%);
+      background: rgba(245, 241, 230, 0.96);
+      border: 1px solid rgba(94, 54, 67, 0.12);
+      border-radius: 20px;
+      box-shadow: 0 18px 46px rgba(0,0,0,0.25);
+      padding: 16px;
+      max-height: 80vh;
+      overflow: auto;
+    }
+    .updates-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .updates-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #5e3643;
+      line-height: 1.2;
+    }
+    .updates-subtitle {
+      margin-top: 2px;
+      font-size: 12px;
+      color: #888;
+    }
+    .updates-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      border: 1px solid rgba(94, 54, 67, 0.12);
+      background: rgba(255,255,255,0.7);
+      color: #5e3643;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .updates-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .seg {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.7);
+      border: 1px solid rgba(94, 54, 67, 0.08);
+    }
+    .seg button {
+      border: none;
+      background: transparent;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: #5e3643;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .seg button.active {
+      background: #5e3643;
+      color: #f5f1e6;
+    }
+    .updates-list {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .update-item {
+      background: rgba(255,255,255,0.85);
+      border: 1px solid rgba(94, 54, 67, 0.08);
+      border-radius: 14px;
+      padding: 10px 12px;
+      display: flex;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .update-item:hover { border-color: rgba(94, 54, 67, 0.25); }
+    .update-thumb {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: #5e3643;
+      flex-shrink: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .update-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .update-thumb.icon { padding: 8px; }
+    .update-thumb.icon img { object-fit: contain; }
+    .update-meta {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .update-line1 {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: baseline;
+    }
+    .update-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #2F2F2F;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .update-date {
+      font-size: 11px;
+      color: #888;
+      flex-shrink: 0;
+    }
+    .update-sub {
+      font-size: 12px;
+      color: #767676;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .update-pill {
+      align-self: flex-start;
+      font-size: 11px;
+      color: #5e3643;
+      background: rgba(94, 54, 67, 0.08);
+      padding: 2px 8px;
+      border-radius: 999px;
+      margin-top: 2px;
+    }
+    .updates-empty {
+      color: #888;
+      font-size: 13px;
+      padding: 16px 6px;
+      text-align: center;
+    }
 
     .corner-logo {
       position: fixed;
@@ -340,6 +514,11 @@
         <span>🗺️</span>
         <span id="tourBtnText">漫游</span>
       </button>
+      <button id="updatesBtn" class="upload-btn pokedex-btn" style="background: #fff; color: #5e3643; border: 1px solid #eee; box-shadow: none; position: relative;">
+        <span>🆕</span>
+        <span id="updatesDot" class="updates-dot"></span>
+        <span>更新</span>
+      </button>
       <a href="/pokedex.html" class="upload-btn pokedex-btn" style="background: #fff; color: #5e3643; border: 1px solid #eee; box-shadow: none;">
         <span>📓</span>
         <span>图鉴</span>
@@ -379,6 +558,29 @@
     <div style="display: flex; align-items: center; gap: 8px;">
       <span>🖱️ 上下滑动</span>
       <span id="tourProgress" style="font-weight: bold; background: rgba(245, 241, 230, 0.2); padding: 2px 8px; border-radius: 12px;">(1/50)</span>
+    </div>
+  </div>
+
+  <div class="updates-overlay" id="updatesOverlay" aria-hidden="true">
+    <div class="updates-panel" role="dialog" aria-modal="true">
+      <div class="updates-header">
+        <div>
+          <div class="updates-title">最近更新</div>
+          <div class="updates-subtitle" id="updatesSubtitle">加载中...</div>
+        </div>
+        <button class="updates-close" id="updatesCloseBtn" aria-label="关闭">×</button>
+      </div>
+      <div class="updates-controls">
+        <div class="seg" id="updatesTabSeg">
+          <button type="button" data-tab="works" class="active">新增记录</button>
+          <button type="button" data-tab="pokedex">新增图鉴</button>
+        </div>
+        <div class="seg" id="updatesRangeSeg">
+          <button type="button" data-days="7">7天</button>
+          <button type="button" data-days="30" class="active">30天</button>
+        </div>
+      </div>
+      <div class="updates-list" id="updatesList"></div>
     </div>
   </div>
 
@@ -607,9 +809,9 @@
     }
 
     const createIcon = (rarity) => {
-      let bgColor = '#D9CFCB'; // 默认/普通：更浅的浅灰褐
-      if (rarity === '非常稀有') bgColor = '#4A2631'; // 非常稀有：更深的暗酒红
-      else if (rarity === '稀有') bgColor = '#A67C80'; // 稀有：中度红褐
+      let bgColor = '#D9CFCB';
+      if (rarity === '非常稀有') bgColor = '#4A2631';
+      else if (rarity === '稀有') bgColor = '#A67C80';
       
       return L.divIcon({
         className: 'custom-marker',
@@ -621,6 +823,252 @@
         popupAnchor: [0, -20]
       });
     };
+
+    const updatesBtn = document.getElementById('updatesBtn');
+    const updatesDot = document.getElementById('updatesDot');
+    const updatesOverlay = document.getElementById('updatesOverlay');
+    const updatesCloseBtn = document.getElementById('updatesCloseBtn');
+    const updatesList = document.getElementById('updatesList');
+    const updatesSubtitle = document.getElementById('updatesSubtitle');
+    const updatesTabSeg = document.getElementById('updatesTabSeg');
+    const updatesRangeSeg = document.getElementById('updatesRangeSeg');
+
+    const updatesState = {
+      tab: 'works',
+      days: 30,
+      data: { works: [], pokedex: [] }
+    };
+
+    function escapeHtml(input) {
+      const s = String(input ?? '');
+      return s
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function parseTime(value) {
+      const t = Date.parse(value);
+      return Number.isFinite(t) ? t : 0;
+    }
+
+    function formatDate(value) {
+      const t = parseTime(value);
+      if (!t) return '';
+      const d = new Date(t);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const thisYear = new Date().getFullYear();
+      return y === thisYear ? `${m}-${day}` : `${y}-${m}-${day}`;
+    }
+
+    function isRecent(ts, days) {
+      if (!ts) return false;
+      return Date.now() - ts <= days * 24 * 60 * 60 * 1000;
+    }
+
+    async function fetchArray(primaryUrl, fallbackUrl) {
+      try {
+        const r = await fetch(primaryUrl);
+        if (r.ok) {
+          const json = await r.json();
+          return json.data || json || [];
+        }
+      } catch (_) {}
+      try {
+        const r2 = await fetch(fallbackUrl);
+        const json2 = await r2.json();
+        return json2.data || json2 || [];
+      } catch (_) {}
+      return [];
+    }
+
+    async function refreshUpdatesData() {
+      const [works, pokedex] = await Promise.all([
+        fetchArray(`${API_BASE}/api/works`, './data/works.json'),
+        fetchArray(`${API_BASE}/api/pokedex`, './data/pokedex.json')
+      ]);
+      updatesState.data.works = (works || []).filter(w => (w && w.status === 'approved'));
+      updatesState.data.pokedex = (pokedex || []);
+    }
+
+    function setSegActive(container, selectorKey, value) {
+      if (!container) return;
+      container.querySelectorAll('button').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute(selectorKey) === value);
+      });
+    }
+
+    function renderUpdates() {
+      if (!updatesList || !updatesSubtitle) return;
+      const days = updatesState.days;
+      const tab = updatesState.tab;
+
+      if (tab === 'works') {
+        const items = (updatesState.data.works || [])
+          .filter(w => isRecent(parseTime(w.createdAt), days))
+          .sort((a, b) => parseTime(b.createdAt) - parseTime(a.createdAt))
+          .slice(0, 30);
+
+        updatesSubtitle.textContent = `最近 ${days} 天新增记录：${items.length}`;
+
+        if (items.length === 0) {
+          updatesList.innerHTML = `<div class="updates-empty">最近 ${days} 天暂无新增记录</div>`;
+          return;
+        }
+
+        updatesList.innerHTML = items.map(w => {
+          const title = escapeHtml(w.title || '未命名花格');
+          const addr = escapeHtml((w.location && w.location.address) ? w.location.address : '未知位置');
+          const id = escapeHtml(w._id || '');
+          const img = (w.images && w.images[0]) ? escapeHtml(w.images[0]) : '';
+          const date = escapeHtml(formatDate(w.createdAt));
+          const pill = escapeHtml(w.rarity || '记录');
+
+          return `
+            <div class="update-item" data-kind="works" data-id="${id}">
+              <div class="update-thumb">
+                ${img ? `<img src="${img}" alt="">` : ''}
+              </div>
+              <div class="update-meta">
+                <div class="update-line1">
+                  <div class="update-name">${title}</div>
+                  <div class="update-date">${date}</div>
+                </div>
+                <div class="update-sub">📍 ${addr}</div>
+                <div class="update-pill">${pill}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+        return;
+      }
+
+      const items = (updatesState.data.pokedex || [])
+        .filter(p => isRecent(parseTime(p.createdAt || p.updatedAt), days))
+        .sort((a, b) => parseTime(b.createdAt || b.updatedAt) - parseTime(a.createdAt || a.updatedAt))
+        .slice(0, 30);
+
+      updatesSubtitle.textContent = `最近 ${days} 天新增图鉴：${items.length}`;
+
+      if (items.length === 0) {
+        updatesList.innerHTML = `<div class="updates-empty">最近 ${days} 天暂无新增图鉴</div>`;
+        return;
+      }
+
+      updatesList.innerHTML = items.map(p => {
+        const name = escapeHtml(p.name || '未知');
+        const id = escapeHtml(p.id || '');
+        const icon = p.icon ? escapeHtml(p.icon) : '';
+        const cat = escapeHtml(p.category || '未分类');
+        const date = escapeHtml(formatDate(p.createdAt || p.updatedAt));
+        return `
+          <div class="update-item" data-kind="pokedex" data-id="${id}">
+            <div class="update-thumb icon">
+              ${icon ? `<img src="${icon}" alt="">` : ''}
+            </div>
+            <div class="update-meta">
+              <div class="update-line1">
+                <div class="update-name">No.${id} ${name}</div>
+                <div class="update-date">${date}</div>
+              </div>
+              <div class="update-sub">${cat}</div>
+              <div class="update-pill">图鉴</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openUpdates() {
+      if (!updatesOverlay) return;
+      updatesOverlay.classList.add('show');
+      updatesOverlay.setAttribute('aria-hidden', 'false');
+      refreshUpdatesData().then(() => {
+        renderUpdates();
+        const dotCount = (updatesState.data.works || []).filter(w => isRecent(parseTime(w.createdAt), 7)).length
+          + (updatesState.data.pokedex || []).filter(p => isRecent(parseTime(p.createdAt || p.updatedAt), 7)).length;
+        if (updatesDot) updatesDot.style.display = dotCount > 0 ? 'block' : 'none';
+      });
+    }
+
+    function closeUpdates() {
+      if (!updatesOverlay) return;
+      updatesOverlay.classList.remove('show');
+      updatesOverlay.setAttribute('aria-hidden', 'true');
+    }
+
+    function focusWorkById(workId) {
+      const found = (validWorks || []).find(v => v && v.work && v.work._id === workId);
+      if (found) {
+        const zoom = Math.max(map.getZoom(), 17);
+        markerClusterGroup.zoomToShowLayer(found.marker, () => {
+          map.setView([found.lat, found.lng], zoom, { animate: true });
+          found.marker.openPopup();
+        });
+        return true;
+      }
+      const w = (updatesState.data.works || []).find(x => x && x._id === workId);
+      if (w && w.location && w.location.lat && w.location.lng) {
+        map.setView([parseFloat(w.location.lat), parseFloat(w.location.lng)], 17, { animate: true });
+        return true;
+      }
+      return false;
+    }
+
+    if (updatesBtn) {
+      updatesBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        openUpdates();
+      });
+    }
+    if (updatesCloseBtn) {
+      updatesCloseBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        closeUpdates();
+      });
+    }
+    if (updatesOverlay) {
+      updatesOverlay.addEventListener('click', (e) => {
+        if (e.target === updatesOverlay) closeUpdates();
+      });
+    }
+    if (updatesTabSeg) {
+      updatesTabSeg.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-tab]');
+        if (!btn) return;
+        updatesState.tab = btn.getAttribute('data-tab');
+        setSegActive(updatesTabSeg, 'data-tab', updatesState.tab);
+        renderUpdates();
+      });
+    }
+    if (updatesRangeSeg) {
+      updatesRangeSeg.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-days]');
+        if (!btn) return;
+        updatesState.days = parseInt(btn.getAttribute('data-days'), 10) || 30;
+        setSegActive(updatesRangeSeg, 'data-days', String(updatesState.days));
+        renderUpdates();
+      });
+    }
+    if (updatesList) {
+      updatesList.addEventListener('click', (e) => {
+        const item = e.target.closest('.update-item');
+        if (!item) return;
+        const kind = item.getAttribute('data-kind');
+        const id = item.getAttribute('data-id');
+        if (!kind || !id) return;
+        closeUpdates();
+        if (kind === 'works') {
+          focusWorkById(id);
+        } else if (kind === 'pokedex') {
+          location.href = `/pokedex.html?id=${encodeURIComponent(id)}`;
+        }
+      });
+    }
 
     async function loadWorks() {
       // 解析 URL 参数，看是否有指定的经纬度
@@ -652,6 +1100,7 @@
           works = [];
         }
       }
+      window.__worksCache = works;
       
       markerClusterGroup.clearLayers();
       markers = [];
@@ -756,6 +1205,11 @@
         if (city) cities.add(city);
       });
       if (cityEl) cityEl.textContent = `城市：${cities.size}`;
+
+      if (updatesDot) {
+        const recentWorks = works.filter(w => w && w.status === 'approved' && isRecent(parseTime(w.createdAt), 7)).length;
+        updatesDot.style.display = recentWorks > 0 ? 'block' : 'none';
+      }
     }
 
     loadWorks();
